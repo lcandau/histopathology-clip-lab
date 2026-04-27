@@ -1,221 +1,118 @@
-# histopathology-clip-lab
-Medical histopathology images AI lab using CLIP model for semi-supervised training. The aim of this repository is to explore the CLIP model for histopathology as a diagnosis aid.
-
-This project investigates the use of vision-language models such as CLIP for zero-shot and weakly supervised classification of histopathology images, aiming to assess their potential as diagnostic support tools under limited annotation scenarios.
-
----
-
-# 🧬 Histopathology CLIP Lab (ResNet50 - Baseline)
+# 🧬 Histopathology CLIP Lab
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)  
-![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange.svg)  
-![Status](https://img.shields.io/badge/Status-Research%20Prototype-yellow)  
-![License](https://img.shields.io/badge/License-MIT-green)
+![TensorFlow](https://img.shields.io/badge/Framework-TensorFlow-orange.svg)  
+![Status](https://img.shields.io/badge/Status-Research%20Project-yellow)  
 
 ---
 
 ## 🔬 Project Overview
 
-This repository explores the use of **CLIP-style multimodal models** for **histopathology image understanding**, focusing on **zero-shot classification**.
+This project explores the application of **Foundational Models (FM)** to **oncology histopathology imaging**, with a focus on **self-supervised and multimodal learning**.
 
-Instead of relying on large annotated datasets (which are scarce in medical domains), this project investigates whether a model can:
-
-- Learn **joint representations of images and text**
-- Use **natural language prompts** (e.g., *"A histopathology image of lung adenocarcinoma"*)
-- Perform **zero-shot classification** without task-specific training
-
-### 🧠 Core Idea
-
-We align:
-- 🖼️ Image embeddings (via ResNet50)
-- 📝 Text embeddings (via BERT)
-
-…into a shared latent space using **contrastive learning**, enabling inference via similarity.
+Modern foundational models aim to learn **general representations from raw data without explicit labels**, enabling strong performance on downstream tasks such as classification, anomaly detection, clustering, and segmentation. This repository serves as a sandbox to evaluate how well these architectures adapt to the complex, highly specific domain of cellular pathology.
 
 ---
 
-## 🧠 Methodology
+## 🧠 Research Objective
 
-### 🏗️ Model Architecture
+The main goal of this project is to evaluate, tune, and compare different foundational model approaches on histopathology data:
 
-- **Image Encoder**
-  - ResNet50 (ImageNet pretrained)
-- **Text Encoder**
-  - BERT tokenizer + encoder
-- **Projection Layers**
-  - Map both modalities into a shared embedding space
-- **Training Objective**
-  - Contrastive loss (CLIP-style)
+### 1. CLIP (Multimodal Learning)
+- Align image (tissue patches) and text representations (diagnostic prompts).
+- Evaluate **zero-shot classification** capabilities in a strictly medical context.
+- Measure **image-label consistency** and retrieval performance (Recall@K).
 
----
+### 2. ViT-based Models
+- Replace standard CNN backbones with Vision Transformers.
+- Evaluate structural representation quality and attention mapping.
 
-### ⚙️ Training Strategy
-
-Each image is paired with a descriptive prompt:
-
-"A histopathology image of lung adenocarcinoma"
-
-The model learns to:
-- Maximize similarity for correct image-text pairs
-- Minimize similarity for incorrect pairs
+### 3. DINOv2 (Self-Supervised Learning)
+- Learn dense visual features entirely without labels.
+- Leverage resulting embeddings for:
+  - Clustering (UMAP / k-Means)
+  - Anomaly detection
+  - Downstream linear-probing tasks
 
 ---
 
-### 🔍 Zero-Shot Evaluation
+## 📁 Repository Structure
 
-At inference time:
+The project is structured to isolate distinct experiments while sharing common utilities.
 
-1. Generate embeddings for candidate text prompts  
-2. Compare them with image embeddings  
-3. Select the class with highest similarity  
-
-➡️ No classifier head required
-
----
-
-### 🗂️ Dataset
-
-- Histopathology images:
-  - Lung (normal, adenocarcinoma, squamous cell carcinoma)
-  - Colon (normal, adenocarcinoma)
-- RGB images
-- Classification task (no segmentation masks)
-
----
-
-### 📊 Evaluation Methods
-
-- Confusion Matrix  
-- Cosine Similarity Scoring  
-- Embedding Visualization (UMAP)  
-- Zero-shot classification accuracy  
-
----
-
-## ⚠️ Limitations & Challenges
-
-### 1. 📉 Limited Dataset Size
-- Small and imbalanced medical dataset  
-- Impacts generalization  
-
-**Mitigation:**  
-- Zero-shot learning reduces dependence on labels  
+    histopathology-clip-lab/
+    │
+    ├── data/                       # Raw and processed dataset files (ignored in git)
+    │
+    ├── experiments/                # Isolated experiment environments
+    │   │
+    │   ├── exp_01_baseline/        # 🔹 CLIP with ResNet50 + BERT
+    │   │   ├── notebooks/          # Iterative Jupyter notebooks (v1 -> v6+)
+    │   │   ├── checkpoints/        # Saved weights (.h5), splits, and history logs
+    │   │   └── README.md           # Experiment-specific documentation & changelogs
+    │   │
+    │   ├── exp_02_vit/             # 🔹 CLIP with Vision Transformer backbone
+    │   │   └── README.md
+    │   │
+    │   ├── exp_03_dino/            # 🔹 CLIP + DINO-pretrained ViT backbone
+    │   │   └── README.md
+    │   │
+    ├── src/                        # Shared utilities (if abstracted from notebooks)
+    │   ├── data_loader.py
+    │   └── evaluation.py
+    │
+    ├── README.md                   # Project overview (You are here)
+    └── requirements.txt            # Shared dependencies (keras-hub, tensorflow, etc.)
 
 ---
 
-### 2. 🌍 Domain Gap (ImageNet → Histopathology)
-- Pretrained on natural images  
-- Histopathology has very different visual patterns  
+## 🧪 Experimental Roadmap
 
-⚠️ Still unresolved  
+| Experiment | Status | Description |
+|----------|:---:|------------|
+| [**exp_01_baseline**](experiments/exp_01_baseline/README.md) | 🟢 Active | Baseline CLIP with ResNet50 (vision) and BERT (text). Focus on prompt ensembling, contrastive loss, and baseline zero-shot metrics. |
+| [**exp_02_vit**](experiments/exp_02_vit/README.md) | ⚪ Planned | Replacing ResNet50 with a Vision Transformer backbone trained from scratch to evaluate representational improvements. |
+| [**exp_03_dino**](experiments/exp_03_dino/README.md) | ⚪ Planned | Hybrid approach using a DINOv2 self-supervised pretrained ViT as the image encoder inside the CLIP framework. |
 
----
-
-### 3. 📝 Prompt Sensitivity
-- Predictions depend heavily on wording  
-
-Example:
-- "lung cancer" vs "lung adenocarcinoma"  
-
-**Mitigation:**  
-- Standardized prompt templates  
-- Iterative prompt refinement  
+Each experiment deeply explores:
+- Representation learning quality  
+- Zero-shot classification & F1 performance  
+- Embedding structure (via UMAP visualizations)  
+- Generalization capabilities across varying stains/patients
 
 ---
 
-### 4. ⚙️ Training Instability
-- Contrastive learning sensitive to:
-  - Batch size  
-  - Normalization  
-  - Loss scaling  
+## 📊 Dataset
 
-**Mitigation:**  
-- Progressive improvements across versions  
+This project utilizes the `andrewmvd/lung-and-colon-cancer-histopathological-images` dataset from Kaggle, which includes:
+- **5 distinct classes:** Lung benign, Lung adenocarcinoma, Lung squamous cell carcinoma, Colon benign, Colon adenocarcinoma.
+- **Format:** RGB image patches (224x224).
+- **Labels:** Dynamically ensembled into descriptive text prompts during training.
 
 ---
 
-### 5. 📊 Evaluation Complexity
-- Harder than standard classification  
+## 🔍 Key Questions
 
-**Mitigation:**  
-- Added visualization + similarity-based evaluation  
-
----
-
-## 📦 Version History
-
-### 🔹 v1 — Initial CLIP Prototype
-- CLIP-style architecture (ResNet50 + BERT)  
-- Prompt-based training  
-- Basic contrastive loss  
-- Initial dataset pipeline  
+This project aims to answer:
+1. Can CLIP perform highly accurate **zero-shot classification** in medical imaging without fine-tuning on massive medical datasets?
+2. How much does the **backbone architecture** (CNN vs. ViT) impact cross-modal alignment?
+3. Can **self-supervised models (DINO)** fundamentally outperform supervised multimodal approaches by learning deeper tissue semantics?
+4. Do the resulting high-dimensional embeddings organically reveal **hidden structures** (e.g., morphological subclusters or slide anomalies)?
 
 ---
 
-### 🔹 v2 — Zero-Shot Pipeline
-- Introduced zero-shot classification  
-- Prompt-based inference  
-- Improved evaluation structure  
+## ⚠️ Challenges
 
----
-
-### 🔹 v3 — Evaluation Improvements
-- Added confusion matrix  
-- Embedding similarity analysis  
-- More robust metrics  
-
----
-
-### 🔹 v4 — Pipeline Refactor
-- Cleaner training/evaluation separation  
-- Improved preprocessing  
-- Better reproducibility  
-
----
-
-### 🔹 v5 — Generalization Improvements
-- Data augmentation  
-- Improved robustness  
-- Better zero-shot performance  
-
----
-
-### 🔹 v6 — Final Experimental Version
-- Consolidated pipeline  
-- Clean notebook structure  
-- Ready for reporting / thesis usage  
-
----
-
-## 🚀 Future Work
-
-- Fine-tune backbone on histopathology datasets  
-- Explore **ViT-based CLIP models**  
-- Multi-prompt ensembling  
-- Few-shot learning benchmarks  
-- Extend to weak segmentation tasks  
-
----
-
-## 🧾 Summary
-
-This project shows that:
-
-- CLIP-style models can be adapted to **medical imaging**  
-- Zero-shot classification is **feasible but limited**  
-- Performance is constrained by:
-  - Data availability  
-  - Domain mismatch  
-  - Prompt design  
-
-➡️ Provides a foundation for **low-supervision medical AI systems**
+- **Domain Gap:** Transitioning models pre-trained on natural images (ImageNet/WebImage) to histopathology.
+- **Prompt Sensitivity:** Contrastive learning performance is highly sensitive to the phrasing of diagnostic text prompts.
+- **Hardware Limitations:** Managing large effective batch sizes required for InfoNCE loss on limited GPU memory.
+- **Stain Variance:** Accounting for H&E dye inconsistencies across different laboratory slides.
 
 ---
 
 ## 👨‍🔬 Author
 
-**Leandro Candau**  
-AI & Software Engineer  
+**Leandro Candau** Seniour Software Engineer | Student for Applied Machine Learning Engineer
 
 ---
 
