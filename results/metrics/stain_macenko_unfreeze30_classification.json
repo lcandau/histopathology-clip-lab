@@ -1,0 +1,7 @@
+{
+  "version": "stain_macenko_unfreeze30",
+  "accuracy": 0.9180,
+  "balanced_accuracy": 0.9180,
+  "macro_f1": 0.9180,
+  "weighted_f1": 0.9180
+}

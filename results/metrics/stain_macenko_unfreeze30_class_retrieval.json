@@ -1,0 +1,13 @@
+{
+  "version": "stain_macenko_unfreeze30",
+  "i2t": {
+    "R@1": 0.9180,
+    "R@5": 1.0
+  },
+  "t2i_class_level": {
+    "precision_at_1": 1.0,
+    "precision_at_5": 0.96,
+    "precision_at_10": 0.98,
+    "precision_at_50": 0.972
+  }
+}

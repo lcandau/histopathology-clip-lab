@@ -1,0 +1,13 @@
+{
+  "version": "stain_macenko",
+  "i2t": {
+    "R@1": 0.7384,
+    "R@5": 1.0
+  },
+  "t2i_class_level": {
+    "precision_at_1": 1.0,
+    "precision_at_5": 0.92,
+    "precision_at_10": 0.88,
+    "precision_at_50": 0.904
+  }
+}

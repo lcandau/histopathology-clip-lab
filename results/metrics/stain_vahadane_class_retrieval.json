@@ -1,0 +1,13 @@
+{
+  "version": "stain_vahadane",
+  "i2t": {
+    "R@1": 0.6684,
+    "R@5": 1.0
+  },
+  "t2i_class_level": {
+    "precision_at_1": 1.0,
+    "precision_at_5": 0.92,
+    "precision_at_10": 0.9,
+    "precision_at_50": 0.86
+  }
+}

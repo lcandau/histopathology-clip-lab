@@ -1,0 +1,6 @@
+class,precision,recall,f1,support
+benign lung tissue,0.577338,0.642,0.607955,500
+lung adenocarcinoma,0.541147,0.434,0.481687,500
+lung squamous cell carcinoma,0.729981,0.784,0.756027,500
+benign colon tissue,0.716505,0.738,0.727094,500
+colon adenocarcinoma,0.696538,0.684,0.690212,500
