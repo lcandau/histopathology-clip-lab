@@ -179,13 +179,73 @@ DINOv2 image encoder    & DINOv2 frozen               & BERT frozen             
 
 \section{PLIP zero-shot comparison}
 \label{sec:results-plip}
+
+\subsection{Setup}
 \begin{itemize}
-    \item Same arch family as the baseline; pretrained on $\sim$200K pathology image-text pairs from Twitter.
-    \item Zero-shot eval on the same test split + prompts.
-    \item Isolates the pathology-pretraining contribution.
-    \item Result: \textit{TBD}.
+    \item PLIP (Huang 2023): CLIP on $\sim$200k pathology Twitter pairs.
+    \item Loaded \texttt{vinid/plip}, evaluated zero-shot on same test split + prompts.
+    \item Isolates pathology-pretraining contribution.
 \end{itemize}
 
+\subsection{Headline numbers vs baseline}
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|l|c|c|c|}
+    \hline
+    \textbf{Metric} & \textbf{Baseline (general)} & \textbf{PLIP (pathology)} & \textbf{$\Delta$} \\ \hline
+    Accuracy          & 0.6356 & 0.6980 & +0.062 \\ \hline
+    Balanced accuracy & 0.6356 & 0.6980 & +0.062 \\ \hline
+    Macro F1          & 0.6273 & 0.7004 & +0.073 \\ \hline
+    Weighted F1       & 0.6273 & 0.7004 & +0.073 \\ \hline
+    \end{tabular}
+    \caption{Pathology pretraining contribution to frozen CLIP transfer.}
+    \label{tab:plip-vs-baseline-global}
+\end{table}
+
+\subsection{Per-class}
+\begin{itemize}
+    \item Big gains on benign tissues (lung F1 0.67$\to$0.87; colon F1 0.67$\to$0.80).
+    \item Cancer subtypes essentially tied (lung\_aca F1 0.48$\to$0.48; colon\_aca F1 0.55$\to$0.56).
+    \item Lung SCC recall jumps (0.84$\to$0.93), precision drops (0.70$\to$0.68) $\to$ overcalls SCC.
+\end{itemize}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.95\textwidth]{../results/confusion_matrices/plip_zeroshot_confusion_matrices.png}
+    \caption{PLIP zero-shot confusion matrices, same five classes as the baseline. Left: raw counts. Right: row-normalised by true class.}
+    \label{fig:plip-cm}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/plip_zeroshot_umap.png}
+        \par\vspace{2pt}\footnotesize (a) Vanilla scatter.
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/plip_zeroshot_umap_thumbnails.png}
+        \par\vspace{2pt}\footnotesize (b) Sample-image thumbnails.
+    \end{minipage}
+    \caption{PLIP zero-shot shared UMAP of test image embeddings and the five class-prompt embeddings (cosine metric). Image clusters separate by class meaningfully better than the baseline (Figure~\ref{fig:baseline-umap}), but the five prompt markers still collapse into a near-singular point --- the same short-prompt + frozen text encoder degeneracy as the baseline. PLIP earns its $+7.3$ macro-F1 by producing better image embeddings, not by separating prompts.}
+    \label{fig:plip-umap}
+\end{figure}
+
+\subsection{Retrieval contrast}
+\begin{itemize}
+    \item I$\to$T R@1 = 0.6980 (matches accuracy).
+    \item T$\to$I P@K \emph{worse} than the baseline (P@1: 0.40 vs 0.80; P@50: 0.53 vs 0.84).
+    \item Reading: the baseline was trained on LC25000 $\to$ embedding space tuned for in-distribution ranking. PLIP zero-shot $\to$ wins classification, loses fine ranking.
+\end{itemize}
+
+\subsection{Interpretation}
+\begin{itemize}
+    \item Pathology pretraining $\approx$ +7.3 macro-F1 on frozen CLIP transfer.
+    \item Gain in benign-vs-malignant, not in subtype discrimination.
+    \item Image clusters in the shared UMAP separate visibly better than the baseline (Figure~\ref{fig:plip-umap}), but the prompt markers still collapse --- domain pretraining helps the image side, not the (still-degenerate) text side.
+    \item Feature adaptation confirmed as the bigger lever in \S\ref{sec:results-adaptation}; PLIP's frozen-domain gain is one-third of unfreezing's frozen-vs-adapted gain.
+\end{itemize}
 
 \section{Plain image classifier on the same features}
 \label{sec:results-linear-probe}
@@ -260,7 +320,7 @@ DINOv2 image encoder    & DINOv2 frozen               & BERT frozen             
     \hline
     \textbf{Experiment} & \textbf{Accuracy} & \textbf{Macro F1} & \textbf{$\Delta$ vs baseline} \\ \hline
     Baseline                                   & 0.6356 & 0.6273 & --- \\ \hline
-    PLIP zero-shot                             & --- & --- & --- \\ \hline
+    PLIP zero-shot                             & 0.6980 & 0.7004 & +0.073 \\ \hline
     Plain image classifier (frozen)            & --- & --- & --- \\ \hline
     Plain image classifier (unfreeze30)        & --- & --- & --- \\ \hline
     Partial fine-tuning (CLIP, unfreeze30)     & --- & --- & --- \\ \hline
