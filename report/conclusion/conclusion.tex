@@ -6,7 +6,7 @@
 \begin{itemize}
     \item Baseline result (RQ1): 63.6\% / 62.7\% macro-F1, worst class lung adenocarcinoma.
     \item Pathology pretraining (RQ2): PLIP $+7.3$ macro-F1, mainly benign vs malignant.
-    \item Feature adaptation (RQ3): \textit{TBD}.
+    \item Feature adaptation (RQ3): partial unfreezing (last 30 of 178 layers) $+27.1$ macro-F1, broad-based across classes.
     \item CLIP-paradigm value (RQ4): CLIP and plain CE tie at the frozen-features ceiling ($\sim 0.63$); CLIP wins $+2.6$ macro-F1 over CE under feature adaptation (unfreeze30), broad-based across all classes. The paradigm's primary value remains in capabilities (open-vocabulary, retrieval), not raw accuracy.
     \item Stain normalization (RQ5): \textit{TBD}.
     \item Biomedical text encoder (RQ6): \textit{TBD}.

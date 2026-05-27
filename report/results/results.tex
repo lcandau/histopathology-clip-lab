@@ -296,13 +296,50 @@ DINOv2 image encoder    & DINOv2 frozen               & BERT frozen             
 
 \section{Feature-level adaptation: partial unfreezing}
 \label{sec:results-adaptation}
+
 \begin{itemize}
-    \item Same arch/loss/prompts/split as the baseline; unfreezes the last 30 of 178 ResNet50 layers.
-    \item BatchNorm running stats update during training in the unfrozen tail.
-    \item Tests how much accuracy is bottlenecked by frozen ImageNet features.
-    \item Result: \textit{TBD}.
+    \item Same arch/loss/prompts/data/split as the baseline; only the trainable mask on ResNet50 changes.
+    \item Last 30 of 178 ResNet50 layers unfrozen ($\approx 14.4$\,M extra trainable params on top of the projection heads).
+    \item BatchNorm in the unfrozen tail updates its running stats during training (training mode) and uses them at eval.
+    \item LR dropped 10$\times$ to $10^{-4}$ to protect the pretrained features.
 \end{itemize}
 
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|l|c|c|}
+    \hline
+    \textbf{Metric} & \textbf{Baseline} & \textbf{Unfreeze last 30} \\ \hline
+    Accuracy           & 0.6356 & \textbf{0.8984} \\ \hline
+    Balanced accuracy  & 0.6356 & \textbf{0.8984} \\ \hline
+    Macro F1           & 0.6273 & \textbf{0.8981} \\ \hline
+    Weighted F1        & 0.6273 & \textbf{0.8981} \\ \hline
+    \end{tabular}
+    \caption{Partial fine-tuning vs frozen baseline: global classification metrics on the held-out test set.}
+    \label{tab:unfreeze30-global}
+\end{table}
+
+\begin{itemize}
+    \item $+27.1$ macro-F1 over the baseline ($\approx 3.7\times$ the PLIP zero-shot gain).
+    \item Broad-based across classes: every class $F_1 \geq 0.85$.
+    \item Lung\_aca: $F_1\ 0.48 \to 0.85$ (worst baseline class; still hardest but no longer a failure mode).
+    \item $+0.25$ macro-F1 over the frozen-features ceiling measured by the plain CE classifier ($\sim 0.64$, see~\S\ref{sec:results-linear-probe}). Headroom to fully-fine-tuned literature results on LC25000 ($\sim 0.95\text{--}0.99$, end-to-end training, often with stronger backbones) is harder to pin down precisely without running that regime ourselves.
+\end{itemize}
+
+\begin{figure}[ht]
+    \centering
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/unfreeze30_umap.png}
+        \par\vspace{2pt}\footnotesize (a) Vanilla scatter.
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/unfreeze30_umap_thumbnails.png}
+        \par\vspace{2pt}\footnotesize (b) Sample-image thumbnails.
+    \end{minipage}
+    \caption{Unfreeze30 shared UMAP of test image embeddings and the five class-prompt embeddings (cosine metric), in two views from the same fit. Compare with the baseline UMAP in Figure~\ref{fig:baseline-umap} --- the unfrozen-tail embedding space shows tighter, better-separated class clusters and prompt markers that sit clearly inside their own cluster.}
+    \label{fig:unfreeze30-umap}
+\end{figure}
 
 \section{Stain normalization ablation}
 \label{sec:results-stain}
@@ -360,7 +397,7 @@ DINOv2 image encoder    & DINOv2 frozen               & BERT frozen             
     PLIP zero-shot                             & 0.6980 & 0.7004 & +0.073 \\ \hline
     Plain image classifier (frozen)            & 0.6440 & 0.6369 & +0.010 \\ \hline
     Plain image classifier (unfreeze30)        & 0.8728 & 0.8723 & +0.245 \\ \hline
-    Partial fine-tuning (CLIP, unfreeze30)     & --- & --- & --- \\ \hline
+    Partial fine-tuning (CLIP, unfreeze30)     & 0.8984 & 0.8981 & +0.271 \\ \hline
     Stain normalization (best of M/R/V)        & --- & --- & --- \\ \hline
     Biomedical text encoder (best)             & --- & --- & --- \\ \hline
     External colon dataset                     & --- & --- & --- \\ \hline
