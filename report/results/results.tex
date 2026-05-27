@@ -250,12 +250,49 @@ DINOv2 image encoder    & DINOv2 frozen               & BERT frozen             
 \section{Plain image classifier on the same features}
 \label{sec:results-linear-probe}
 \begin{itemize}
-    \item Drops the CLIP architecture: ResNet50 $\to$ GAP $\to$ Dense(5), sparse cross-entropy.
-    \item Run at both feature-adaptation budgets (frozen and unfreeze30) for a $2 \times 2$ comparison.
-    \item Isolates what the CLIP architecture contributes once the backbone and inputs are held constant.
-    \item Result: \textit{TBD}.
+    \item Drops the CLIP architecture: no text encoder, no projection heads, no learnable temperature, no contrastive loss.
+    \item Replaces with: ResNet50 $\to$ GAP $\to$ BatchNorm $\to$ Dense(5) trained with sparse cross-entropy.
+    \item Run at both feature-adaptation budgets (frozen and unfreeze30) so the comparison vs the CLIP variants in \S\ref{sec:results-baseline} and \S\ref{sec:results-adaptation} is a complete $2 \times 2$.
+    \item Isolates what the CLIP architecture itself contributes once the image encoder, data and adaptation budget are held constant.
 \end{itemize}
 
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|l|c|c|c|c|}
+    \hline
+                                & \multicolumn{2}{c|}{\textbf{Frozen}}     & \multicolumn{2}{c|}{\textbf{Unfreeze last 30}} \\ \hline
+    \textbf{Architecture}       & Acc.    & Macro F1 & Acc.            & Macro F1 \\ \hline
+    CLIP (InfoNCE)              & 0.6356  & 0.6273   & \textbf{0.8984} & \textbf{0.8981} \\ \hline
+    Plain (CE softmax)          & 0.6440  & 0.6369   & 0.8728          & 0.8723   \\ \hline
+    $\Delta$ (CLIP -- plain CE) & $-0.0084$ & $-0.0096$ & $+0.0256$       & $+0.0258$  \\ \hline
+    \end{tabular}
+    \caption{CLIP vs plain CE classifier on the same ResNet50 backbone at each feature-adaptation budget. Frozen regime: tied within noise. Unfreeze30 regime: CLIP wins $+2.6$ macro-F1.}
+    \label{tab:linear-probe}
+\end{table}
+
+\subsection{Interpretation}
+\begin{itemize}
+    \item Frozen regime: CLIP and plain CE tie within noise. Both saturate at the ImageNet-features ceiling of $\sim 0.63$; the architecture choice is invisible when the feature space is fixed.
+    \item Unfreeze30 regime: CLIP outperforms plain CE by $+2.6$ macro-F1, broad-based across every class (benign lung $+0.018$; lung\_aca $+0.022$; lung\_scc $+0.020$; benign colon $+0.038$; colon\_aca $+0.031$).
+    \item Plausible mechanism: InfoNCE with five shared class-prompt targets acts as implicit regularisation against per-image memorisation. With $\sim 14$\,M trainable parameters in the unfrozen tail, requiring every sample of a class to align with the same prompt limits how much sample-specific information the model can store. The benefit only materialises once the model has the capacity to overfit, which is why the frozen regime sees no difference.
+    \item The CLIP paradigm's value on a closed-set 5-class task is not raw accuracy. The $+2.6$ macro-F1 bonus under feature adaptation is real but secondary --- the paradigm's load-bearing contribution is capabilities a plain classifier cannot provide: open-vocabulary classification at inference, image--text retrieval, prompt-tuning as a controlled lever.
+\end{itemize}
+
+\begin{figure}[ht]
+    \centering
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/plain_classifier_umap.png}
+        \par\vspace{2pt}\footnotesize (a) Frozen ResNet50 features.
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/plain_classifier_unfreeze30_umap.png}
+        \par\vspace{2pt}\footnotesize (b) Last 30 layers unfrozen.
+    \end{minipage}
+    \caption{Plain-classifier UMAP of test image features, coloured by true class. No text encoder in this ablation, so no prompt markers --- this is an image-side view only. (a) Frozen features show weak, tangled class structure consistent with the $\sim 0.64$ classification ceiling. (b) With the last 30 layers unfrozen, classes resolve into five well-separated clusters, consistent with the $\sim 0.87$ accuracy.}
+    \label{fig:plain-classifier-umap}
+\end{figure}
 
 \section{Feature-level adaptation: partial unfreezing}
 \label{sec:results-adaptation}
@@ -321,8 +358,8 @@ DINOv2 image encoder    & DINOv2 frozen               & BERT frozen             
     \textbf{Experiment} & \textbf{Accuracy} & \textbf{Macro F1} & \textbf{$\Delta$ vs baseline} \\ \hline
     Baseline                                   & 0.6356 & 0.6273 & --- \\ \hline
     PLIP zero-shot                             & 0.6980 & 0.7004 & +0.073 \\ \hline
-    Plain image classifier (frozen)            & --- & --- & --- \\ \hline
-    Plain image classifier (unfreeze30)        & --- & --- & --- \\ \hline
+    Plain image classifier (frozen)            & 0.6440 & 0.6369 & +0.010 \\ \hline
+    Plain image classifier (unfreeze30)        & 0.8728 & 0.8723 & +0.245 \\ \hline
     Partial fine-tuning (CLIP, unfreeze30)     & --- & --- & --- \\ \hline
     Stain normalization (best of M/R/V)        & --- & --- & --- \\ \hline
     Biomedical text encoder (best)             & --- & --- & --- \\ \hline
