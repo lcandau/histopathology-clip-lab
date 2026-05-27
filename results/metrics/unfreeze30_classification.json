@@ -1,0 +1,7 @@
+{
+  "version": "unfreeze30",
+  "accuracy": 0.8984,
+  "balanced_accuracy": 0.8984,
+  "macro_f1": 0.8981,
+  "weighted_f1": 0.8981
+}
