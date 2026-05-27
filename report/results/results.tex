@@ -343,13 +343,189 @@ DINOv2 image encoder    & DINOv2 frozen               & BERT frozen             
 
 \section{Stain normalization ablation}
 \label{sec:results-stain}
+
+\subsection{Setup}
 \begin{itemize}
-    \item Same arch/loss/prompts/split as the baseline; only the image inputs change.
-    \item Head-to-head: Macenko, Reinhard, Vahadane on the same fixed reference patch.
-    \item Per-method delta isolates the stain-normalization method.
-    \item Result: \textit{TBD}.
+    \item Same arch/loss/prompts/split/optimizer as the baseline (\S\ref{sec:results-baseline}); only the image inputs change.
+    \item Head-to-head between Macenko~\cite{macenko2009stain}, Reinhard, and Vahadane on the \emph{same} fixed reference patch (\texttt{colon\_n/colonn1.jpeg}, resized to $224 \times 224$).
+    \item Each method is fit once on the reference, then applied deterministically to every train/val/test image. Normalization is precomputed and cached on Drive so re-runs of figures or downstream evals are cheap.
+    \item The frozen-encoder regime is held fixed so the delta isolates the stain-normalization method itself, not feature adaptation.
 \end{itemize}
 
+\begin{figure}[ht]
+    \centering
+    \begin{minipage}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/stain_macenko_before_after.png}
+        \par\vspace{2pt}\footnotesize (a) Macenko.
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/stain_reinhard_before_after.png}
+        \par\vspace{2pt}\footnotesize (b) Reinhard.
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/stain_vahadane_before_after.png}
+        \par\vspace{2pt}\footnotesize (c) Vahadane.
+    \end{minipage}
+    \caption{Before (left column of each pair) / after (right column) normalization, one example per class. Macenko (SVD on stain vectors in OD space) and Vahadane (sparse NMF on the same OD matrix) both decompose into haematoxylin and eosin channels and re-render with the reference's basis; Reinhard matches first- and second-order LAB-space statistics. The bottom-right Vahadane panel (colon\_aca) shows a failed re-render, discussed in the interpretation.}
+    \label{fig:stain-before-after}
+\end{figure}
+
+\subsection{Headline numbers vs baseline}
+\begin{table}[ht]
+    \centering
+    \small
+    \begin{tabular}{|l|c|c|c|c|c|c|c|}
+    \hline
+    \textbf{Metric} & \textbf{Baseline} & \textbf{Macenko} & \textbf{$\Delta_{\text{M}}$} & \textbf{Reinhard} & \textbf{$\Delta_{\text{R}}$} & \textbf{Vahadane} & \textbf{$\Delta_{\text{V}}$} \\ \hline
+    Accuracy          & 0.6356 & \textbf{0.7384} & +0.103 & 0.6564 & +0.021 & 0.6684 & +0.033 \\ \hline
+    Balanced acc.     & 0.6356 & \textbf{0.7384} & +0.103 & 0.6564 & +0.021 & 0.6684 & +0.033 \\ \hline
+    Macro F1          & 0.6273 & \textbf{0.7390} & +0.117 & 0.6526 & +0.025 & 0.6644 & +0.037 \\ \hline
+    Weighted F1       & 0.6273 & \textbf{0.7390} & +0.117 & 0.6526 & +0.025 & 0.6644 & +0.037 \\ \hline
+    \end{tabular}
+    \caption{Three-way stain-normalization head-to-head on the same frozen CLIP+ResNet50+BERT pipeline. Macenko delivers $\sim 3\times$ Vahadane's gain on macro-F1, and $\sim 4.7\times$ Reinhard's.}
+    \label{tab:stain-global}
+\end{table}
+
+\subsection{Per-class}
+The three methods give visibly different per-class signatures.
+
+\begin{table}[ht]
+    \centering
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{|l|c|c|c|c|c|c|c|}
+    \hline
+    \textbf{Class} & \textbf{Baseline F1} & \textbf{Macenko F1} & \textbf{$\Delta_{\text{M}}$} & \textbf{Reinhard F1} & \textbf{$\Delta_{\text{R}}$} & \textbf{Vahadane F1} & \textbf{$\Delta_{\text{V}}$} \\ \hline
+    benign lung tissue           & 0.669 & \textbf{0.885} & $+0.216$ & 0.608 & $-0.061$ & 0.682 & $+0.013$ \\ \hline
+    lung adenocarcinoma          & 0.479 & \textbf{0.575} & $+0.096$ & 0.482 & $+0.003$ & 0.464 & $-0.015$ \\ \hline
+    lung squamous cell carcinoma & \textbf{0.766} & 0.728 & $-0.038$ & 0.756 & $-0.010$ & 0.788 & $+0.022$ \\ \hline
+    benign colon tissue          & 0.673 & \textbf{0.775} & $+0.102$ & 0.727 & $+0.054$ & 0.689 & $+0.016$ \\ \hline
+    colon adenocarcinoma         & 0.549 & \textbf{0.732} & $+0.183$ & 0.690 & $+0.141$ & 0.698 & $+0.149$ \\ \hline
+    \end{tabular}
+    \caption{Per-class F1 under each normalization. Macenko gains across four of five classes (loses 3.8 pts on lung\_scc); Reinhard's gain is colon-only and it actively \emph{loses} 6.1 pts on benign lung; Vahadane is mixed across classes, with a colon\_aca gain comparable to Reinhard ($+0.15$) but essentially flat on the lung classes.}
+    \label{tab:stain-per-class}
+\end{table}
+
+\begin{figure}[ht]
+    \centering
+    \begin{minipage}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/confusion_matrices/stain_macenko_confusion_matrices.png}
+        \par\vspace{2pt}\footnotesize (a) Macenko.
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/confusion_matrices/stain_reinhard_confusion_matrices.png}
+        \par\vspace{2pt}\footnotesize (b) Reinhard.
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/confusion_matrices/stain_vahadane_confusion_matrices.png}
+        \par\vspace{2pt}\footnotesize (c) Vahadane.
+    \end{minipage}
+    \caption{Confusion matrices (row-normalised) under each stain normalization, same five classes as the baseline.}
+    \label{fig:stain-cm}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \begin{minipage}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/stain_macenko_umap_thumbnails.png}
+        \par\vspace{2pt}\footnotesize (a) Macenko.
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/stain_reinhard_umap_thumbnails.png}
+        \par\vspace{2pt}\footnotesize (b) Reinhard.
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/stain_vahadane_umap_thumbnails.png}
+        \par\vspace{2pt}\footnotesize (c) Vahadane.
+    \end{minipage}
+    \caption{Shared UMAP (image embeddings + class-prompt markers, cosine metric) under each normalization. Compared to the baseline UMAP (Figure~\ref{fig:baseline-umap}), Macenko shows clearly tighter benign-vs-malignant separation; Reinhard and Vahadane improve over baseline more modestly. Prompt markers still collapse in all three cases --- every gain is image-side.}
+    \label{fig:stain-umap}
+\end{figure}
+
+\subsection{Retrieval contrast}
+\begin{itemize}
+    \item I$\to$T R@1 mirrors classification accuracy by construction (Macenko 0.738, Vahadane 0.668, Reinhard 0.656); R@5 = 1.0 in all three cases with five prompts.
+    \item T$\to$I class-level retrieval is stronger than baseline for all three methods: Macenko P@1/5/10/50 = 1.00/0.92/0.88/0.90; Vahadane 1.00/0.92/0.90/0.86; Reinhard 1.00/0.96/0.92/0.85; baseline 0.80/0.72/0.80/0.84. Even Reinhard, whose classification gain is small, sharpens within-class ranking.
+\end{itemize}
+
+\subsection{Composition with feature adaptation (best case)}
+\label{sec:results-stain-combo}
+The 3-way head-to-head above isolates the stain-normalization method at a fixed (frozen) feature-adaptation budget. We now combine the best stain method (Macenko) with the best feature-adaptation regime (unfreeze30, \S\ref{sec:results-adaptation}) into a single run --- Macenko-normalised inputs feeding a CLIP model whose last 30 ResNet50 layers are trainable, everything else identical to the baseline. This is the load-bearing checkpoint for the OOD evaluation in \S\ref{sec:results-external}.
+
+\begin{table}[ht]
+    \centering
+    \small
+    \begin{tabular}{|l|c|c|c|}
+    \hline
+    \textbf{Variant} & \textbf{Accuracy} & \textbf{Macro F1} & \textbf{$\Delta$ vs baseline} \\ \hline
+    Baseline                                & 0.6356 & 0.6273 & --- \\ \hline
+    Macenko (frozen)                        & 0.7384 & 0.7390 & $+0.117$ \\ \hline
+    Unfreeze30 (raw inputs)                 & 0.8984 & 0.8981 & $+0.271$ \\ \hline
+    \textbf{Macenko + Unfreeze30}           & \textbf{0.9180} & \textbf{0.9180} & $\bm{+0.291}$ \\ \hline
+    \end{tabular}
+    \caption{Composition of the two strongest single levers. Combining Macenko (best stain method) with partial fine-tuning gives the highest macro-F1 measured in this study and is the headline RQ5 number.}
+    \label{tab:stain-combo}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \small
+    \begin{tabular}{|l|c|c|c|c|}
+    \hline
+    \textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{$\Delta$ vs baseline} \\ \hline
+    benign lung tissue           & 0.971 & 0.996 & \textbf{0.983} & $+0.314$ \\ \hline
+    lung adenocarcinoma          & 0.853 & 0.838 & 0.846 & $+0.366$ \\ \hline
+    lung squamous cell carcinoma & 0.856 & 0.902 & 0.878 & $+0.112$ \\ \hline
+    benign colon tissue          & 0.953 & 0.940 & \textbf{0.947} & $+0.274$ \\ \hline
+    colon adenocarcinoma         & 0.960 & 0.914 & \textbf{0.936} & $+0.388$ \\ \hline
+    \end{tabular}
+    \caption{Macenko + Unfreeze30 per-class metrics. The lung\_aca class --- the worst across every other variant --- is the only one that doesn't clear F1 = 0.85, but it still gains $+0.37$ over the baseline.}
+    \label{tab:stain-combo-perclass}
+\end{table}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.95\textwidth]{../results/confusion_matrices/stain_macenko_unfreeze30_confusion_matrices.png}
+    \caption{Confusion matrices for Macenko + Unfreeze30. Off-diagonal mass concentrates on lung\_aca vs lung\_scc, mirroring the residual confusion in the unfreeze30-only run.}
+    \label{fig:stain-combo-cm}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/stain_macenko_unfreeze30_umap.png}
+        \par\vspace{2pt}\footnotesize (a) Vanilla scatter.
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/stain_macenko_unfreeze30_umap_thumbnails.png}
+        \par\vspace{2pt}\footnotesize (b) Sample-image thumbnails.
+    \end{minipage}
+    \caption{Macenko + Unfreeze30 shared UMAP. Compared to the unfreeze30-only UMAP (Figure~\ref{fig:unfreeze30-umap}) the class clusters are slightly tighter and the lung\_aca / lung\_scc boundary is the only remaining noisy region. Class-prompt markers sit clearly inside their own clusters.}
+    \label{fig:stain-combo-umap}
+\end{figure}
+
+\textbf{Reading.} Macenko ($+0.117$) and unfreeze30 ($+0.271$) compose with diminishing returns: combining them gives $+0.020$ over unfreeze30 alone and $+0.179$ over Macenko alone. Feature adaptation does the bulk of the work --- once the backbone can shift its features to the LC25000 distribution, the input-side shift from stain normalization adds only a few points on top. But those few points are clean and broad-based (gains on 4 of 5 classes), so the composition is unambiguously preferred over either lever in isolation. This is the variant used as the LC25000-trained checkpoint in the OOD transfer evaluation.
+
+\subsection{Interpretation}
+\begin{itemize}
+    \item Macenko clears the frozen-features ceiling by $+11.7$ macro-F1 --- larger than the PLIP zero-shot gain ($+7.3$, \S\ref{sec:results-plip}) and obtained without changing the backbone or any pretraining.
+    \item Vahadane and Reinhard add only $+3.7$ and $+2.5$ macro-F1. The 3$\times$ gap to Macenko is the informative comparison: Macenko and Vahadane share the same principle (decompose each image's optical-density matrix into a H/E stain matrix and a per-pixel concentration matrix, re-render with the reference's basis) and differ only in solver --- Macenko uses closed-form SVD, Vahadane uses iterative sparse NMF. On LC25000, the NMF solver fails to converge on a fraction of patches and returns near-zero concentrations, visible directly in Figure~\ref{fig:stain-before-after}(c) bottom-right as a near-blank re-render. The realised stain-normalization gain therefore depends on solver stability, not just on the underlying principle.
+    \item RQ5 reading: the large method-specific gain on frozen general-purpose features is consistent with the model relying on inter-image colour variation as a partial shortcut. Macenko removes that signal cleanly; Reinhard removes it together with some legitimate diagnostic colour cues (benign lung F1 drops 6.1 points under Reinhard); Vahadane removes it on most patches but corrupts a fraction. The shortcut hypothesis survives across all three.
+    \item Per-class signatures point at the reference: the reference patch is a benign colon image, and the colon classes gain under every method (Macenko $+0.183$, Reinhard $+0.141$, Vahadane $+0.149$ on colon\_aca). Lung classes only gain meaningfully under Macenko, which keeps tissue types in roughly the right corner of feature space; under Reinhard and Vahadane they are flat or slightly degraded.
+    \item Read with PLIP: pathology pretraining shifts the image-feature distribution toward H\&E content; stain normalization shifts the input distribution toward a fixed H\&E reference. Both gains accrue on the image side of the UMAP, not the text side --- the prompt-marker collapse persists under every normalisation tested.
+    \item Caveats: single seed per condition, single reference patch. Reference rotation and a more robust NMF setup (higher \texttt{max\_iter}, different init) are left as future work.
+\end{itemize}
 
 \section{Biomedical text encoder ablation}
 \label{sec:results-biotext}
@@ -398,7 +574,8 @@ DINOv2 image encoder    & DINOv2 frozen               & BERT frozen             
     Plain image classifier (frozen)            & 0.6440 & 0.6369 & +0.010 \\ \hline
     Plain image classifier (unfreeze30)        & 0.8728 & 0.8723 & +0.245 \\ \hline
     Partial fine-tuning (CLIP, unfreeze30)     & 0.8984 & 0.8981 & +0.271 \\ \hline
-    Stain normalization (best of M/R/V)        & --- & --- & --- \\ \hline
+    Stain normalization (Macenko, frozen)      & 0.7384 & 0.7390 & +0.117 \\ \hline
+    \textbf{Macenko + Unfreeze30 (best case)}  & \textbf{0.9180} & \textbf{0.9180} & \textbf{+0.291} \\ \hline
     Biomedical text encoder (best)             & --- & --- & --- \\ \hline
     External colon dataset                     & --- & --- & --- \\ \hline
     \end{tabular}

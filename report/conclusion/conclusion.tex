@@ -8,7 +8,7 @@
     \item Pathology pretraining (RQ2): PLIP $+7.3$ macro-F1, mainly benign vs malignant.
     \item Feature adaptation (RQ3): partial unfreezing (last 30 of 178 layers) $+27.1$ macro-F1, broad-based across classes.
     \item CLIP-paradigm value (RQ4): CLIP and plain CE tie at the frozen-features ceiling ($\sim 0.63$); CLIP wins $+2.6$ macro-F1 over CE under feature adaptation (unfreeze30), broad-based across all classes. The paradigm's primary value remains in capabilities (open-vocabulary, retrieval), not raw accuracy.
-    \item Stain normalization (RQ5): \textit{TBD}.
+    \item Stain normalization (RQ5): the gain is strongly method-specific. Macenko yields $+11.7$ macro-F1 ($0.627 \to 0.739$) at the frozen-backbone budget, larger than the PLIP zero-shot gain; Vahadane yields $+3.7$ and Reinhard $+2.5$ on the identical pipeline. Composing the best stain method (Macenko) with the best feature-adaptation regime (unfreeze30) reaches \textbf{0.918 macro-F1}, the highest measured in this study --- $+0.020$ over unfreeze30 alone, so the levers compose with diminishing returns rather than additively.
     \item Biomedical text encoder (RQ6): \textit{TBD}.
     \item OOD transfer (RQ7): \textit{TBD}.
     \item Cross-cutting observations: saturation of frozen transfer, role of dataset artifacts.
