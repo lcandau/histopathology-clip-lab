@@ -539,12 +539,69 @@ The 3-way head-to-head above isolates the stain-normalization method at a fixed 
 
 \section{Out-of-distribution generalization}
 \label{sec:results-external}
+
+\subsection{Setup}
 \begin{itemize}
-    \item Zero-shot eval of LC25000-trained variants on an external colon dataset.
-    \item Includes PLIP zero-shot as a domain-pretrained reference.
-    \item Result: \textit{TBD}.
+    \item External dataset: \textbf{NCT-CRC-HE-7K} (Kather et al.\ 2019, Zenodo record 1214456), the standardised held-out test split of the Heidelberg colorectal histopathology dataset. 7\,180 patches across 9 tissue classes, acquired and stained at a different institution than LC25000.
+    \item Evaluation restricted to NCT classes \texttt{NORM} (normal colon mucosa) and \texttt{TUM} (colorectal adenocarcinoma epithelium), which map directly to LC25000's \texttt{benign colon tissue} and \texttt{colon adenocarcinoma}. Total OOD test set: $741 + 1\,233 = 1\,974$ patches.
+    \item All five LC25000 class prompts are kept at evaluation, so each variant is evaluated under the same prompt regime it was trained with. A misclassification into a lung class counts as wrong.
+    \item Pure inference: every variant reuses its checkpoint from the in-distribution experiments above. No fine-tuning on NCT.
 \end{itemize}
 
+\subsection{Variants compared}
+We evaluate four LC25000-trained CLIP variants, a domain-pretrained reference (PLIP zero-shot), and --- to disambiguate the role of OOD-time Macenko normalization --- two extra ablation rows where the Macenko-trained checkpoints are fed the \emph{raw} NCT inputs instead of NCT-normalised-with-LC25000's Macenko fitter:
+
+\begin{table}[ht]
+    \centering
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{|l|c|c|c|c|}
+    \hline
+    \textbf{Variant} & \textbf{OOD inputs} & \textbf{Accuracy} & \textbf{Balanced acc.} & \textbf{Macro F1} \\ \hline
+    Baseline CLIP (raw, frozen)                                & raw       & 0.1327 & 0.1399 & 0.2134 \\ \hline
+    Macenko CLIP (frozen)                                       & Macenko   & 0.0000 & 0.0000 & 0.0000 \\ \hline
+    Unfreeze30 CLIP (raw)                                       & raw       & 0.3865 & 0.3167 & 0.3309 \\ \hline
+    Macenko + Unfreeze30 (best in-distribution)                 & Macenko   & 0.0000 & 0.0000 & 0.0000 \\ \hline
+    \multicolumn{5}{|l|}{\textit{Disambiguation: Macenko-trained checkpoints fed raw NCT inputs}} \\ \hline
+    Macenko ckpt, raw NCT inputs                                & raw       & 0.0922 & 0.0988 & 0.1538 \\ \hline
+    Combo ckpt, raw NCT inputs                                  & raw       & 0.1449 & 0.1216 & 0.2011 \\ \hline
+    \multicolumn{5}{|l|}{\textit{Domain-pretrained reference}} \\ \hline
+    \textbf{PLIP zero-shot}                                     & raw (PLIP processor) & \textbf{0.5572} & \textbf{0.6095} & \textbf{0.6610} \\ \hline
+    \end{tabular}
+    \caption{OOD transfer to NCT-CRC-HE-7K (NORM + TUM, 1\,974 patches). PLIP zero-shot wins across the board; the best LC25000-trained variant is the raw-trained Unfreeze30 (frozen-Macenko-trained variants fail catastrophically with their training-time normalization at OOD).}
+    \label{tab:ood-global}
+\end{table}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.95\textwidth]{../results/confusion_matrices/ood_nct_crc_he_7k_confusion_matrices.png}
+    \caption{Row-normalised confusion matrices on NCT-CRC-HE-7K (NORM + TUM subset). Cells in the two displayed columns sum to less than 1 when the model predicts a non-colon LC25000 class (\texttt{lung\_aca}, \texttt{lung\_scc}, \texttt{benign\_lung}); that missing probability mass is the rate at which the model leaves the colon label space entirely. The two Macenko-trained variants with Macenko-normalised inputs predict outside the colon classes on essentially every patch.}
+    \label{fig:ood-cm}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{../results/plots/ood_nct_crc_he_7k_umap_grid.png}
+    \caption{Per-variant UMAP of OOD image embeddings (shared fit with the five LC25000 class-prompt markers $P_0\ldots P_4$, cosine metric). Image points are coloured by NCT class (\textcolor{blue}{NORM} / \textcolor{red}{TUM}). The six LC25000-trained variants all show a single dense interleaved blob --- the model's representation cannot distinguish NCT NORM from NCT TUM regardless of training recipe. Only PLIP (bottom row, third panel) produces two visibly separated colon clusters with the prompt markers anchored between them.}
+    \label{fig:ood-umap}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{../results/plots/ood_nct_crc_he_7k_cross_distribution_umap.png}
+    \caption{Cross-distribution UMAP per variant: LC25000 test set (circles) and NCT NORM + TUM (triangles) projected into a \emph{single} UMAP fit per variant. Colours: LC25000 lung classes (orange), LC25000 colon classes (green), NCT NORM (dark blue), NCT TUM (dark red). Across the four working LC25000-trained variants (baseline, Unfreeze30, and the two raw-NCT disambiguation rows) the lung and colon LC25000 regions separate cleanly, and the NCT triangles --- both NORM and TUM --- land on the colon side, not in lung territory. \emph{Organ-level structure transfers}: the model carries enough of LC25000's lung-vs-colon split that NCT colon patches reach the right organ region. What does not transfer is the \emph{within-colon} benign-vs-malignant discrimination: NORM and TUM triangles interleave in roughly the same region as the LC25000 green cluster, so the model decides ``colon'' but cannot pick which colon class. The two Macenko-with-Macenko variants (top-second, bottom-first) are the broken double-normalization runs and should be read with that caveat. PLIP zero-shot (bottom row, third panel) is the only variant whose UMAP cleanly separates both organ and within-organ structure into distinct clusters.}
+    \label{fig:ood-cross-umap}
+\end{figure}
+
+\subsection{Interpretation}
+\begin{itemize}
+    \item \textbf{Organ-level transfer works; within-organ transfer does not.} A close reading of the cross-distribution UMAP (Figure~\ref{fig:ood-cross-umap}) and the confusion matrices reveals that the LC25000-trained variants do not fail uniformly. The non-broken variants (baseline, Unfreeze30, the two raw-NCT disambiguation rows) all separate LC25000 lung from LC25000 colon in their embedding space, and they all place the NCT colon patches on the colon side --- the model has carried over the organ distinction. What it has not carried over is the within-colon distinction: the confusion matrices show baseline predicting nearly everything as \texttt{benign\_colon} regardless of true label, and Unfreeze30 predicting nearly everything as \texttt{colon\_aca}. The errors are \emph{within} colon, not into lung. This refines the headline finding: LC25000 training transfers organ-level features but does not transfer the cellular cues that separate normal mucosa from adenocarcinoma epithelium under NCT's tighter label semantics (caveat 3).
+    \item \textbf{PLIP wins by a wide margin.} A domain-pretrained foundation model with no LC25000 fine-tuning ($0.661$ macro-F1) beats every LC25000-trained variant on this OOD test, including the best in-distribution model ($0.918$ in-distribution, $0.000$ OOD). The PLIP UMAP (Figure~\ref{fig:ood-umap}) and cross-distribution UMAP (Figure~\ref{fig:ood-cross-umap}) are the only ones with both clean organ separation \emph{and} within-organ NORM/TUM separation. Pathology pretraining is the only ingredient that produces representations which transfer at both levels.
+    \item \textbf{The OOD-time Macenko transform is itself catastrophic.} Both Macenko-trained checkpoints drop to 0\% macro-F1 when their training-time Macenko normalization is also applied at OOD. The most likely mechanism is double-normalization: NCT-CRC-HE was already colour-normalised against its own internal reference in the Kather 2019 release, and applying our LC25000-fit Macenko on top shifts NCT pixels into a region of input space the model has never seen, despite the visual output of the second normalization step looking superficially reasonable (Figure~\ref{fig:stain-before-after} analogue not shown for NCT).
+    \item \textbf{Removing Macenko at OOD only partially recovers the Macenko checkpoints.} The two disambiguation rows (Macenko ckpts fed raw NCT) recover from $0\%$ to $9$--$14\%$ macro-F1, but they remain below the raw-trained Unfreeze30 variant ($0.331$) by a factor of two. The Macenko-trained \emph{features} themselves are more specialised to the LC25000-Macenko'd input distribution than raw-trained features are to raw LC25000.
+    \item \textbf{A trade-off, not a free lunch.} In-distribution, Macenko + Unfreeze30 was the highest-performing model in the entire study ($0.918$ macro-F1, $+0.291$ over baseline, \S\ref{sec:results-stain-combo}); OOD, the same model is among the worst. The training recipe that maximises in-distribution accuracy also maximises domain specialization. This is the central finding of RQ7: \emph{stain normalization is an in-distribution lever; under domain shift, it can become a liability.}
+    \item \textbf{Caveats.} (1) We restrict the eval to NORM + TUM because no other NCT class maps to an LC25000 prompt; a richer label space (e.g., adding ``stroma'' / ``lymphocyte'' prompts to the model at training time) might widen the comparison. (2) NCT-CRC-HE-7K is itself colour-normalised; an experiment on the unnormalised NCT-CRC-HE-100K-NONORM variant would test whether the Macenko-at-OOD breakage is specific to double-normalization. (3) The class labels themselves are not fully aligned across datasets: NCT \texttt{TUM} is specifically ``colorectal adenocarcinoma epithelium'' (with separate parallel classes for cancer-associated stroma, mucus, debris, lymphocytes), whereas LC25000 \texttt{colon adenocarcinoma} is a patient-level patch label that may include adjacent stroma, lymphocytes, and mucus together. Same for \texttt{NORM} vs \texttt{benign colon tissue}. Part of the transfer gap is a label-granularity mismatch, not just imaging shift. (4) Magnification is explicit for NCT (0.5\,$\mu$m/px, $\approx 20\times$) but not stated in the LC25000 paper; visual inspection suggests $\sim 20\times$ but a small mismatch in microns-per-pixel would shift the effective field of view at the model's input. (5) Single seed per condition; the disambiguation rows share a checkpoint with their main counterparts, so the comparison there is not an independent replicate but a controlled input-side ablation.
+\end{itemize}
 
 \section{Image encoder family}
 \label{sec:results-image-enc}
@@ -560,7 +617,15 @@ The 3-way head-to-head above isolates the stain-normalization method at a fixed 
 \begin{itemize}
     \item Synthesis across matrix rows as they land.
     \item Mapping back to RQ1--RQ7 with numbers.
-    \item Frozen general-purpose ResNet50 features establish the reference floor for transfer.
+    \item Frozen general-purpose ResNet50 features cap at $\sim 0.64$ macro-F1 on LC25000 (measured by the plain CE classifier, \S\ref{sec:results-linear-probe}). The CLIP baseline reaches $0.6273$ on the same features --- essentially saturating the same ceiling. Frozen-features transfer of general-purpose backbones is therefore the limiting regime, not the CLIP architecture itself.
+    \item Pathology-domain pretraining (PLIP zero-shot) clears that ceiling by $+0.07$ macro-F1, mostly via better separation of benign vs malignant tissues. Within the frozen-encoder regime, domain pretraining is one of two levers that cross $\sim 0.64$ on frozen general-purpose features.
+    \item Stain normalization is the largest input-side lever found in this study, but the gain is strongly method-dependent: Macenko clears the frozen-features ceiling by $+0.117$ macro-F1, Vahadane by $+0.037$, Reinhard only by $+0.025$ on the identical pipeline (\S\ref{sec:results-stain}). The gap is informative: Macenko and Vahadane share the same stain-decomposition principle and differ only in solver (closed-form SVD vs. iterative sparse NMF), but the NMF solver fails to converge cleanly on a fraction of patches. ``Stain normalization helps'' therefore compresses both a real shortcut-learning effect and a methodological distinction about solver stability.
+    \item Composing the strongest input-side lever (Macenko) with the strongest feature-adaptation regime (unfreeze30) reaches \textbf{0.918 macro-F1} (\S\ref{sec:results-stain-combo}, Table~\ref{tab:stain-combo}), the highest measured in this study --- $+0.020$ over unfreeze30 alone. The composition has diminishing returns: feature adaptation captures the bulk of the gain by shifting features into the LC25000 distribution, and Macenko's input-side shift then adds a clean but small bonus on top. This is the variant used as the LC25000-trained checkpoint in the OOD transfer evaluation (\S\ref{sec:results-external}).
+    \item Out-of-distribution transfer (\S\ref{sec:results-external}, Table~\ref{tab:ood-global}) inverts the in-distribution ranking. PLIP zero-shot reaches $0.661$ macro-F1 on NCT-CRC-HE-7K; the best LC25000-trained variant is raw-trained Unfreeze30 at $0.331$; the Macenko-trained checkpoints fail catastrophically ($0.000$--$0.20$). The recipe that maximises in-distribution accuracy maximises domain specialisation. Within the LC25000-trained family the OOD ranking is the \emph{opposite} of the in-distribution ranking. The cross-distribution UMAP (Figure~\ref{fig:ood-cross-umap}) sharpens this further: LC25000 training does carry over the lung-vs-colon organ split, and NCT colon patches do land on the colon side of the embedding space --- but the within-colon NORM-vs-TUM discrimination does not transfer. Only PLIP produces representations that visibly separate both organ and tissue-state on the external dataset (Figures~\ref{fig:ood-umap}, \ref{fig:ood-cross-umap}). The headline thesis-level finding is that single-institution fine-tuning of general-purpose CLIP cannot substitute for pathology pretraining when transfer requires within-organ discrimination.
+    \item Feature-level adaptation is the dominant lever measured. Partial unfreezing of the last 30 ResNet50 layers reaches $0.898$ macro-F1 with CLIP and $0.872$ with plain CE. Both unlock $\sim +0.25$ macro-F1 over the frozen-features ceiling --- an order of magnitude larger than any architectural or text-side change in the frozen regime.
+    \item The CLIP architecture contributes a small, consistent $+0.026$ macro-F1 over plain CE under feature adaptation but $\sim 0$ under frozen features. Its main role is enabling capabilities (open-vocabulary classification, retrieval) rather than raw accuracy on this closed 5-class task.
+    \item Residual confusions concentrate on lung\_aca, the hardest discrimination across every variant. Even after partial unfreezing ($F_1 = 0.85$) it remains the weakest class.
+    \item Scope boundaries: no patient-level grouping, no clinical eval, no head-to-head vs CONCH / BiomedCLIP / MUSK, no end-to-end fine-tuning to anchor the dataset's true ceiling.
 \end{itemize}
 
 \begin{table}[ht]
@@ -571,13 +636,16 @@ The 3-way head-to-head above isolates the stain-normalization method at a fixed 
     \textbf{Experiment} & \textbf{Accuracy} & \textbf{Macro F1} & \textbf{$\Delta$ vs baseline} \\ \hline
     Baseline                                   & 0.6356 & 0.6273 & --- \\ \hline
     PLIP zero-shot                             & 0.6980 & 0.7004 & +0.073 \\ \hline
+    OpenAI CLIP zero-shot                      & --- & --- & --- \\ \hline
     Plain image classifier (frozen)            & 0.6440 & 0.6369 & +0.010 \\ \hline
     Plain image classifier (unfreeze30)        & 0.8728 & 0.8723 & +0.245 \\ \hline
     Partial fine-tuning (CLIP, unfreeze30)     & 0.8984 & 0.8981 & +0.271 \\ \hline
     Stain normalization (Macenko, frozen)      & 0.7384 & 0.7390 & +0.117 \\ \hline
     \textbf{Macenko + Unfreeze30 (best case)}  & \textbf{0.9180} & \textbf{0.9180} & \textbf{+0.291} \\ \hline
     Biomedical text encoder (best)             & --- & --- & --- \\ \hline
-    External colon dataset                     & --- & --- & --- \\ \hline
+    External colon (best LC25000-trained: Unfreeze30) & 0.3865 & 0.3309 & --- \\ \hline
+    External colon (PLIP zero-shot)            & 0.5572 & 0.6610 & --- \\ \hline
+    DINOv2                                     & --- & --- & --- \\ \hline
     \end{tabular}
     \caption{Summary of all experiments.}
     \label{tab:ablation-summary}
