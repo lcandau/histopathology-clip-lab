@@ -1,0 +1,8 @@
+class,precision,recall,f1-score,support
+benign lung tissue,0.970516,0.790,0.871003,500
+lung adenocarcinoma,0.474409,0.482,0.478175,500
+lung squamous cell carcinoma,0.683358,0.928,0.787108,500
+benign colon tissue,0.896552,0.728,0.803532,500
+colon adenocarcinoma,0.562000,0.562,0.562000,500
+macro avg,0.717367,0.698,0.700364,2500
+weighted avg,0.717367,0.698,0.700364,2500

@@ -1,0 +1,23 @@
+{
+  "experiment": "exp_01_baseline",
+  "version": "plip_zeroshot",
+  "model": "vinid/plip",
+  "run_date": "2026-05-24",
+  "seed": 42,
+  "global": {
+    "accuracy": 0.6980,
+    "balanced_accuracy": 0.6980,
+    "macro_f1": 0.7004,
+    "weighted_f1": 0.7004
+  },
+  "per_class": {
+    "benign lung tissue":            {"precision": 0.970516, "recall": 0.790, "f1-score": 0.871003, "support": 500},
+    "lung adenocarcinoma":           {"precision": 0.474409, "recall": 0.482, "f1-score": 0.478175, "support": 500},
+    "lung squamous cell carcinoma":  {"precision": 0.683358, "recall": 0.928, "f1-score": 0.787108, "support": 500},
+    "benign colon tissue":           {"precision": 0.896552, "recall": 0.728, "f1-score": 0.803532, "support": 500},
+    "colon adenocarcinoma":          {"precision": 0.562000, "recall": 0.562, "f1-score": 0.562000, "support": 500},
+    "accuracy":                      0.6980,
+    "macro avg":                     {"precision": 0.717367, "recall": 0.698, "f1-score": 0.700364, "support": 2500},
+    "weighted avg":                  {"precision": 0.717367, "recall": 0.698, "f1-score": 0.700364, "support": 2500}
+  }
+}
