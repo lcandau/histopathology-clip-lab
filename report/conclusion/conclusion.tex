@@ -1,0 +1,57 @@
+% !TEX root =../tfmETSI.tex
+\chapter{Conclusions and Future Work}\label{chp:conclusion}
+
+\section{Conclusions}
+\label{sec:concl-conclusions}
+\begin{itemize}
+    \item Baseline result (RQ1): 63.6\% / 62.7\% macro-F1, worst class lung adenocarcinoma.
+    \item Pathology pretraining (RQ2): \textit{TBD}.
+    \item Feature adaptation (RQ3): \textit{TBD}.
+    \item CLIP-paradigm value (RQ4): \textit{TBD}.
+    \item Stain normalization (RQ5): \textit{TBD}.
+    \item Biomedical text encoder (RQ6): \textit{TBD}.
+    \item OOD transfer (RQ7): \textit{TBD}.
+    \item Cross-cutting observations: saturation of frozen transfer, role of dataset artifacts.
+\end{itemize}
+
+
+\section{Limitations}
+\label{sec:concl-limitations}
+\begin{itemize}
+    \item Single-institution dataset, no patient-level grouping, no clinical validation.
+    \item Small batch + few classes $\to$ InfoNCE false negatives, documented not mitigated.
+    \item Frozen-backbone baseline tests transfer, not full fine-tuning.
+    \item No human-expert evaluation.
+    \item No head-to-head against CONCH / BiomedCLIP / MUSK (compute scope).
+\end{itemize}
+
+
+\section{Future Work}
+\label{sec:concl-future}
+
+Near-term:
+\begin{itemize}
+    \item Additional external datasets beyond colon-Kaggle.
+    \item SupCon or class-balanced sampling for false-negative regime.
+    \item Patient-level grouping if metadata recoverable.
+\end{itemize}
+
+Not run in this project (low expected $\Delta$ under frozen text encoders + short prompts):
+\begin{itemize}
+    \item Inference-time prompt ensembling.
+    \item Dynamic prompt training.
+\end{itemize}
+
+Medium-term:
+\begin{itemize}
+    \item Larger effective batch (grad accumulation or bigger GPU).
+    \item Prompt-tuning methods (CoOp, CoCoOp).
+\end{itemize}
+
+Longer-term:
+\begin{itemize}
+    \item Architecture-controlled comparison against CONCH / BiomedCLIP / MUSK / PathChat.
+    \item Multi-institution training and evaluation.
+    \item Returning to segmentation with pathology FM backbones.
+    \item CLIP-with-short-labels applied to other low-label scientific domains.
+\end{itemize}

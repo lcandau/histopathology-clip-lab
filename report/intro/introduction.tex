@@ -1,0 +1,69 @@
+% !TEX root =../tfmETSI.tex
+\chapter{Introduction}\label{chp:introduction}
+\epigraph{Learning directly from raw text about images is a promising alternative which leverages a much broader source of supervision.}{Radford et al., 2021}
+
+\section{Motivation}
+\label{sec:intro-motivation}
+\begin{itemize}
+    \item Clinical relevance of histopathology classification.
+    \item Limited labelled data - recurring limitation in this domain.
+    \item Foundation models - able to do different tasks with little task-specific supervision.
+    \item Project question: "How does CLIP transfer to histopathology with different backbones? Where are its limits?"
+    \item Framing: CLIP as the object of study, not the classifier. Findings should generalise to other scientific domains where short or missing labels are the norm.
+\end{itemize}
+
+
+\section{Project Scope Evolution}
+\label{sec:intro-scope}
+\begin{itemize}
+    \item Initial direction -> semantic segmentation. Abandoned because annotated segmentation data was too scarce within the time budget.
+    \item Pivot -> image-level classification, same domain, reframed question.
+    \item Testbed: LC25000. Reference point: PLIP.
+\end{itemize}
+
+
+\section{Research Questions}
+\label{sec:intro-rq}
+\begin{itemize}
+    \item RQ1: Frozen general-purpose CLIP transfer to LC25000 --- quality and failure modes.
+    \item RQ2: Pathology pretraining contribution (PLIP vs the general-purpose baseline).
+    \item RQ3: Feature-adaptation contribution (partial unfreezing of the image encoder).
+    \item RQ4: CLIP-paradigm contribution vs a plain image classifier on the same frozen features.
+    \item RQ5: Stain normalization $\to$ shortcut-learning probe (Macenko / Reinhard / Vahadane head-to-head).
+    \item RQ6: Biomedical text encoder (BioBERT / PubMedBERT) under short prompts.
+    \item RQ7: Out-of-distribution transfer (external colon dataset).
+\end{itemize}
+
+
+\section{Contributions}
+\label{sec:intro-contributions}
+
+The central contribution of this project is a controlled measurement of how much each major design choice in a CLIP-style histopathology pipeline actually matters, with every claim framed as a delta over the same controlled baseline --- frozen ResNet50 + frozen BERT, single fixed prompt, stratified 80/10/10 split on LC25000 --- and iterated through one experiment in Chapter~\ref{results}.
+
+Measured claims:
+\begin{itemize}
+    \item \textbf{Pathology-domain pretraining.} PLIP zero-shot vs the general-purpose baseline: $+7.3$ macro-F1 (69.8\,\% / 70.0\,\% vs 63.6\,\% / 62.7\,\%), with no LC25000 training. Gain concentrates on benign tissues; the two cancer subtypes (lung\_aca, colon\_aca) tie.
+    \item \textbf{Feature-level adaptation.} Last 30 layers of ResNet50 unfrozen, LR dropped 10$\times$ to $10^{-4}$, everything else held constant: $+27.1$ macro-F1 (89.8\,\% / 89.8\,\%). Broad-based; every class $F_1 \geq 0.85$; lung\_aca moves $0.48 \to 0.85$.
+    \item \textbf{CLIP architecture vs plain CE classifier on the same features.} A $2 \times 2$ comparison at each adaptation budget. Frozen regime: tied within noise ($+1.0$ macro-F1 to plain CE, $0.6369$ vs $0.6273$). Unfreeze30 regime: CLIP wins $+2.6$ macro-F1 ($0.8981$ vs $0.8723$), broad-based across classes. The CLIP architecture neither costs nor benefits accuracy at the frozen-features ceiling but gains a small consistent advantage when features adapt, plausibly via implicit regularisation from the InfoNCE loss.
+\end{itemize}
+
+Methodology:
+\begin{itemize}
+    \item Single-variable-change protocol: each experiment differs from the baseline in exactly one design choice, so the resulting delta is attributable.
+    \item Artifact bundle (fixed-seed split, weights, metric files, plots) versioned alongside the report in the project repository.
+    \item Explicit written discussion of dataset and methodological limits constraining how far each delta can be generalised.
+\end{itemize}
+
+Pending ablations, scoped and implemented, to be folded in as measured claims once the corresponding run lands:
+\begin{itemize}
+    \item Stain normalization head-to-head: Macenko, Reinhard, Vahadane vs raw inputs.
+    \item Biomedical text encoder swap: BioBERT and PubMedBERT vs frozen BERT base.
+    \item Out-of-distribution transfer of the baseline checkpoint to an external colon dataset.
+\end{itemize}
+
+
+\section{Document Structure}
+\label{sec:intro-structure}
+\begin{itemize}
+    \item Chapter map to be added in the prose pass.
+\end{itemize}

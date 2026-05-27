@@ -1,0 +1,30 @@
+% !TEX root =../tfmETSI.tex
+
+\chapter*{Resumen}
+\pagestyle{especial}
+\chaptermark{Resumen}
+\phantomsection
+\addcontentsline{toc}{listasf}{Resumen}
+
+\begin{itemize}
+    \item Contexto: clasificación de imágenes histopatológicas con datos etiquetados limitados y etiquetas repetidas.
+    \item Enfoque: aprendizaje contrastivo imagen-texto al estilo CLIP con codificadores fundacionales congelados.
+    \item Datos: Kaggle LC25000, 5 clases de tejido de pulmón y colon.
+    \item Diseño experimental: línea base controlada + matriz de ablaciones (una variable a la vez).
+    \item Resultados (parciales): línea base 63.6\,\% accuracy / 62.7\,\% macro-F1; PLIP cero-disparo +7.3 macro-F1; ajuste fino parcial (últimas 30 capas) +27.1 macro-F1 (89.8\,\% / 89.8\,\%).
+\end{itemize}
+
+
+\chapter*{Abstract}
+\pagestyle{especial}
+\chaptermark{Abstract}
+\phantomsection
+\addcontentsline{toc}{listasf}{Abstract}
+
+\begin{itemize}
+    \item Context: histopathology image classification under limited labelled data and repeated labels.
+    \item Approach: CLIP-style image-text contrastive learning with frozen foundation-model encoders.
+    \item Data: Kaggle LC25000, five lung and colon tissue classes.
+    \item Experimental design: a controlled baseline + a single-variable ablation matrix.
+    \item Results (partial): baseline 63.6\,\% accuracy / 62.7\,\% macro-F1; PLIP zero-shot +7.3 macro-F1; partial fine-tuning (last 30 layers) +27.1 macro-F1 (89.8\,\% / 89.8\,\%).
+\end{itemize}

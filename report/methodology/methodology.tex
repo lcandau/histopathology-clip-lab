@@ -1,0 +1,193 @@
+% !TEX root =../tfmETSI.tex
+\chapter{Methodology}\label{chp:methodology}
+
+\section{Overview}
+\label{sec:meth-overview}
+\begin{itemize}
+    \item One-page chapter map + project question recap.
+    \item Reading order: background $\to$ baseline $\to$ ablations.
+\end{itemize}
+
+
+\section{Histopathology Digital Imaging}
+\label{sec:meth-histo}
+\begin{itemize}
+    \item H\&E staining.
+    \item Whole-Slide Imaging + patch extraction.
+    \item Stain variability and normalization (Macenko, Reinhard, Vahadane).
+    \item Why the domain is hard for general-purpose VLMs: domain gap from natural images, no per-image captions in clinical archives, dataset artifacts that can drive performance.
+\end{itemize}
+
+
+\section{Contrastive Vision-Language Learning (CLIP)}
+\label{sec:meth-clip}
+
+\subsection{Why CLIP?}
+\begin{itemize}
+    \item CLIP as object of study, not the classifier.
+    \item Capabilities CLIP provides over a softmax head:
+    \begin{itemize}
+        \item Open-vocabulary classification (new classes via prompts proven by adding new samples).
+        \item Semantic similarity output (cosine vs natural language).
+        \item Prompt engineering as a sensitivity lever.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Architecture and training signal}
+\begin{itemize}
+    \item Dual-encoder + shared embedding space.
+    \item InfoNCE loss, learnable temperature.
+    \item In-batch false-negative regime at small batch + few classes.
+    \item Prompt-based zero-shot classification.
+    \item CLIP-paper sample-level retrieval $\to$ doesn't apply (class-shared prompts).
+\end{itemize}
+
+\begin{figure}[ht]
+    \centering
+    \fbox{\begin{minipage}[c][7cm][c]{0.85\textwidth}\centering
+        \footnotesize Two independent encoders project image and text into a shared $d$-dimensional embedding space. The cosine-similarity matrix across a batch is the input to the symmetric InfoNCE loss.
+    \end{minipage}}
+    \caption{CLIP dual-encoder architecture used in this project.}
+    \label{fig:clip-architecture}
+\end{figure}
+
+
+\section{Image Encoders}
+\label{sec:meth-image}
+\begin{itemize}
+    \item ResNet (CNN baseline).
+    \item Vision Transformer (ViT).
+    \item DINO / DINOv2 (self-supervised).
+\end{itemize}
+
+
+\section{Text Encoders}
+\label{sec:meth-text}
+\begin{itemize}
+    \item Transformer + BERT --- text encoder used by baseline.
+    \item BioBERT / PubMedBERT --- biomedical text encoder swap ablation.
+\end{itemize}
+
+
+\section{Reference baselines: PLIP and a plain image classifier}
+\label{sec:meth-reference}
+\begin{itemize}
+    \item PLIP zero-shot (Huang 2023) --- pathology-pretrained CLIP, frozen, no LC25000 training.
+    \item Plain image classifier --- Dense(5)+softmax on frozen ResNet50 trained with cross-entropy; no text encoder, no CLIP architecture.
+    \item Together: PLIP isolates the pretraining-domain contribution; the plain classifier isolates the CLIP-architecture contribution.
+\end{itemize}
+
+
+\section{Dataset: Kaggle LC25000}
+\label{sec:meth-dataset}
+\begin{itemize}
+    \item Borkowski 2019.
+    \item 5 tissue classes (lung, colon).
+    \item 25\,000 patches from 1\,250 originals via rotation/flip $\to$ no further geometric augmentation.
+    \item Known limits: single institution, possible stain artifacts, no patient-level grouping.
+\end{itemize}
+
+\begin{figure}[ht]
+    \centering
+    \fbox{\begin{minipage}[c][4.5cm][c]{0.95\textwidth}\centering
+        \footnotesize Five-class sample: "benign lung", "lung adenocarcinoma", "lung squamous cell carcinoma", "benign colon", "colon adenocarcinoma".
+    \end{minipage}}
+    \caption{Example image per class from LC25000.}
+    \label{fig:lc25000-samples}
+\end{figure}
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|l|c|c|c|c|}
+    \hline
+    \textbf{Class} & \textbf{Total} & \textbf{Train} & \textbf{Val} & \textbf{Test} \\ \hline
+    benign lung tissue              & 5\,000 & 4\,000 & 500 & 500 \\ \hline
+    lung adenocarcinoma             & 5\,000 & 4\,000 & 500 & 500 \\ \hline
+    lung squamous cell carcinoma    & 5\,000 & 4\,000 & 500 & 500 \\ \hline
+    benign colon tissue             & 5\,000 & 4\,000 & 500 & 500 \\ \hline
+    colon adenocarcinoma            & 5\,000 & 4\,000 & 500 & 500 \\ \hline
+    \textbf{Total}                  & 25\,000 & 20\,000 & 2\,500 & 2\,500 \\ \hline
+    \end{tabular}
+    \caption{LC25000 class counts and stratified split sizes.}
+    \label{tab:lc25000-splits}
+\end{table}
+
+
+\section{Preprocessing and Input Pipeline}
+\label{sec:meth-pre}
+\begin{itemize}
+    \item Image: resize $224\times224$, ResNet-style preprocessing, no further augmentation.
+    \item Text: BERT WordPiece, fixed sequence length.
+    \item Split: stratified 80/10/10, seed 42, persisted.
+\end{itemize}
+
+
+\section{The Baseline}
+\label{sec:meth-baseline}
+\begin{itemize}
+    \item Frozen ResNet50 + frozen BERT.
+    \item Projection heads (Dense + LayerNorm) $\to$ 256-d shared space.
+    \item Learnable temperature, CLIP-style init.
+    \item Symmetric InfoNCE, AdamW, grad clipping.
+    \item Single fixed prompt at train + eval.
+    \item Float32 throughout.
+\end{itemize}
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+    Image encoder              & ResNet50 (ImageNet preset), frozen \\ \hline
+    Text encoder               & BERT base uncased, frozen \\ \hline
+    Projection head            & Dense(256, no bias) $\to$ LayerNorm \\ \hline
+    Embedding dimension        & 256 \\ \hline
+    Image size                 & $224 \times 224$ \\ \hline
+    Text sequence length       & 24 WordPiece tokens \\ \hline
+    Batch size                 & 32 \\ \hline
+    Initial temperature        & $\tau = 0.07$ \\ \hline
+    Loss                       & symmetric InfoNCE \\ \hline
+    Optimizer                  & AdamW \\ \hline
+    Learning rate              & $1 \times 10^{-3}$ \\ \hline
+    Weight decay               & $1 \times 10^{-4}$ \\ \hline
+    Gradient clipnorm          & 1.0 \\ \hline
+    Max epochs                 & 30 \\ \hline
+    EarlyStopping patience     & 5 \\ \hline
+    ReduceLROnPlateau          & factor 0.5, patience 2, min $10^{-6}$ \\ \hline
+    Numerical precision        & float32 \\ \hline
+    Random seed                & 42 \\ \hline
+    \end{tabular}
+    \caption{Baseline hyperparameters. Ablations change exactly one row.}
+    \label{tab:baseline-hyperparameters}
+\end{table}
+
+
+\section{Evaluation Protocol}
+\label{sec:meth-eval}
+\begin{itemize}
+    \item Classification: argmax cosine(image, class-prompt).
+    \item Global: accuracy, balanced accuracy, macro-F1, weighted-F1.
+    \item Per-class: precision, recall, F1.
+    \item Confusion matrices: raw + row-normalized.
+    \item Embeddings: shared image+prompt UMAP, centroid-to-prompt heatmap.
+    \item Class-level retrieval, with explicit positive definition.
+\end{itemize}
+
+
+\section{Experimental Design and Ablation Protocol}
+\label{sec:meth-design}
+\begin{itemize}
+    \item Single-variable-change principle.
+    \item Matrix grouped by axis of variation; full matrix in §\ref{sec:experiment-matrix}.
+    \item Scope boundaries: no patient-level grouping, no human-expert evaluation, no architecture-controlled comparison vs CONCH / BiomedCLIP / MUSK. Deferred to future work.
+\end{itemize}
+
+
+\section{Computational Setup and Reproducibility}
+\label{sec:meth-compute}
+\begin{itemize}
+    \item Hardware: Google Colab T4, local fallback.
+    \item Stack: TensorFlow + KerasHub; PyTorch + transformers for PLIP only.
+    \item Pinned library versions.
+    \item Seeds + PYTHONHASHSEED + \texttt{tf.config.experimental.enable\_op\_determinism()}.
+\end{itemize}

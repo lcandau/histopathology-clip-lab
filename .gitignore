@@ -1,0 +1,55 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# --- Local dev artifacts (mirror of Drive when running outside Colab) ---
+local_drive/
+
+# --- Datasets and large processed files ---
+data/raw/
+data/processed/
+
+# --- Run outputs that are too large to commit ---
+# Trained weights (saved to Drive on Colab, mirrored here locally)
+*.h5
+*.weights.h5
+
+# --- OS / IDE noise ---
+.DS_Store
+.vscode/
+.idea/
+
+# --- LaTeX build artifacts (under report/) ---
+# Auxiliary files
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.lol
+# Index & glossary build artifacts
+*.idx
+*.ind
+*.ilg
+*.glo
+*.gls
+*.glg
+*.ist
+*.acn
+# Bibliography build artifacts
+*.bbl
+*.blg
+# Editor / SyncTeX
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+# Theorem/tmp scratch
+*.thm
+*.tmp
+# Note: report/tfmETSI.pdf is tracked so the current thesis state can be
+# previewed directly from the repo. Update it with a commit when you want
+# the visible PDF to reflect a new version; otherwise local rebuilds are
+# fine to leave uncommitted.
