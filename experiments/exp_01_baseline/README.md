@@ -1,139 +1,34 @@
-# 🧪 Experiment 01 — CLIP Baseline (ResNet50 + BERT)
+# exp_01_baseline — CLIP with ResNet50 + BERT on LC25000
 
-Welcome to the baseline experiment for multimodal contrastive learning applied to histopathology images. 
+CLIP-style image-text contrastive learning with frozen general-purpose backbones, evaluated on the Kaggle LC25000 dataset. This folder hosts the *CLIP + ResNet50 family*: the controlled baseline and its partial-fine-tuning ablation.
 
-## 🎯 Objective
+Related folders:
+- `experiments/exp_02_plip_zeroshot/` — pathology-pretrained CLIP (PLIP) zero-shot reference point.
+- `experiments/exp_03_plain_classifier/` — no-CLIP-architecture control (ResNet50 + Dense(5) + softmax).
 
-Establish a **baseline multimodal model** using CLIP to evaluate:
-- Image-text alignment
-- Zero-shot classification performance
-- Embedding quality in histopathology data
+## Notebooks
 
-*This serves as the **reference experiment** for all subsequent architectural and data improvements.*
+| Notebook | Purpose |
+| --- | --- |
+| `CLIP_ResNet50_baseline.ipynb` | Current baseline. Frozen ResNet50 (ImageNet) + frozen BERT base, projection heads + learnable temperature, symmetric InfoNCE. |
+| `CLIP_ResNet50_unfreeze30.ipynb` | Partial fine-tuning ablation. Same recipe as the baseline but the last 30 layers of ResNet50 are trainable; LR dropped 10x. |
+| `CLIP_ResNet50_v1.ipynb` ... `v6.ipynb` | Earlier proof-of-concept iterations. Kept for reference; not part of the project's experiment set. |
 
----
+## Archived runs
 
-## 🧠 Methodology
+Completed runs live under `runs/<YYYY-MM-DD>_<tag>/` with the executed notebook (outputs embedded).
 
-### Architecture
-- **Image Encoder:** ResNet50 *(ImageNet pretrained)*
-- **Text Encoder:** BERT
-- **Projection Layers:** Shared embedding space
-- **Loss:** Contrastive loss (InfoNCE)
+| Date | Tag | Notebook | Accuracy | Macro F1 |
+| --- | --- | --- | --- | --- |
+| 2026-05-24 | `baseline` (initial) | `CLIP_ResNet50_baseline.ipynb` | 0.6300 | 0.6247 |
+| 2026-05-25 | `baseline` (rerun, canonical) | `CLIP_ResNet50_baseline.ipynb` | 0.6356 | 0.6273 |
+| 2026-05-25 | `unfreeze30` | `CLIP_ResNet50_unfreeze30.ipynb` | 0.8984 | 0.8981 |
 
-### Training Setup
-During training, each image is paired with a dynamically generated prompt template, for example:
-> `"A histopathology image of [class]."`
+## What this baseline isolates
 
-**The model is trained to learn:**
-* ✅ High cosine similarity for correct image-text pairs.
-* ❌ Low cosine similarity for incorrect image-text pairs.
+- Frozen backbones $\to$ no feature-level adaptation.
+- Single fixed prompt template at training and evaluation.
+- No augmentation (LC25000 is already pre-augmented from 1,250 originals).
+- Stratified 80/10/10 split (seed 42) shared across all experiments.
 
-### Inference (Zero-Shot)
-1. Encode all candidate textual prompts.
-2. Compare them against the target image embedding.
-3. Select the prompt with the highest similarity score.
-
----
-
-## 🗂️ Dataset
-
-This experiment uses lung & colon histopathology images, categorized into **5 distinct classes**:
-1. Lung normal (benign tissue)
-2. Lung adenocarcinoma
-3. Lung squamous cell carcinoma
-4. Colon normal (benign tissue)
-5. Colon adenocarcinoma
-
----
-
-## 📊 Evaluation Metrics
-
-To thoroughly assess the model's capabilities, we track:
-* **Zero-shot Accuracy & Macro F1:** Overall classification metrics.
-* **Confusion Matrix:** To identify specific inter-class misclassifications.
-* **Retrieval Scores:** Cross-modal Image-to-Text and Text-to-Image recall.
-* **UMAP Visualization:** 2D projections of the high-dimensional embedding space.
-
----
-
-## ⚠️ Limitations
-
-* **Domain Gap:** ResNet50 was pretrained on natural images (ImageNet), which differs vastly from cellular pathology structures.
-* **Prompt Sensitivity:** The model's retrieval performance can vary based on the exact wording of the text prompts.
-* **Data Constraints:** We are operating with a limited dataset size and potential class imbalances.
-
----
-
-## 📈 Results (Summary)
-
-> ⏳ *(TBD once we finalize the current training run)*
-
-- **Zero-shot accuracy:** `XX%`
-- **Macro F1 Score:** `XX%`
-- **Key Observations:**
-  - Strong clustering observed in: `[Class X]`
-  - Notable confusion between: `[Class Y]` and `[Class Z]`
-
----
-
-## 🔗 Related Experiments
-
-- 👉 **ViT Version:** `../exp_02_vit/`
-- 👉 **DINO Version:** `../exp_03_dino/`
-
----
-
-## 🗺️ Roadmap & Next Steps
-
-Our immediate goals to elevate this baseline to a state-of-the-art approach:
-
-- [ ] **Address Contrastive "False Negatives":** With only 5 classes, standard InfoNCE loss incorrectly penalizes the model when two images of the same class appear in the same batch. We will explore **Supervised Contrastive Loss (SupCon)** or a soft-target InfoNCE loss.
-- [ ] **Scale the Effective Batch Size:** Contrastive learning relies heavily on a large pool of hard negatives. We plan to implement **Gradient Accumulation** to simulate much larger batch sizes (e.g., 64 or 128) on limited hardware.
-- [ ] **Upgrade to Domain-Specific Backbones:** - *Text Encoder:* Swap general BERT for **PubMedBERT** or **ClinicalBERT** to natively handle complex medical terminology.
-  - *Vision Encoder:* Explore Vision Transformers (ViT) or domain-pretrained pathology encoders like **CTransPath** or **Phikon**.
-- [ ] **Advanced Pathology Augmentations:** Enhance the data pipeline with domain-specific techniques like **Macenko stain normalization** and spatial transformations (e.g., random rotations, elastic deformations).
-- [ ] **Parameter-Efficient Fine-Tuning (PEFT):** Experiment with **LoRA (Low-Rank Adaptation)** on the text encoder to allow it to adapt to our specific dataset without risking catastrophic forgetting.
-- [ ] **Prevent Potential Data Leakage:** Restructure future train/test splits strictly at the **patient level** or **WSI (Whole Slide Image) level** to guarantee the model learns generalizable cancer features rather than patient-specific artifacts.
-
----
-
-## 📦 Version History
-
-<details>
-<summary><strong>Click to expand previous versions (v1 - v5)</strong></summary>
-
-### 🔹 v1 — Initial Baseline Setup
-* **Base Models:** Initialized the dual-encoder architecture using `keras_hub` with `resnet_50_imagenet` (Vision) and `bert_base_en_uncased` (Text) backbones. Both frozen.
-* **Architecture Dimensions:** `IMG_SIZE = 224`, `MAX_LEN = 32`, and `EMBED_DIM = 256`.
-* **Training Hyperparameters:** `BATCH_SIZE = 4`, `10` Epochs, `Adam` optimizer (`lr = 1e-4`).
-* **Dataset & Processing:** Downloaded `andrewmvd` dataset via `kagglehub`.
-* **Custom CLIP Model:** Defined custom `keras.Model` implementing InfoNCE contrastive loss and trainable temperature (`logit_scale`).
-
-### 🔹 v2 — Zero-Shot Pipeline
-* **Batch Size:** Increased from `4` to `8`.
-* **Epochs:** Increased from `10` to `20`.
-
-### 🔹 v3 — Evaluation Improvements
-* **Dataset Splitting:** Shifted to an 80/10/10 train/validation/test split.
-* **Data Loading:** Implemented structured `CLASS_INFO` dictionaries for cleaner label management.
-* **Model Checkpointing:** Added `ModelCheckpoint` to automatically save best weights.
-
-### 🔹 v4 — Pipeline Refactor
-* **State Management:** Added robust save/load logic for model weights, dataset splits (`split.json`), and training history to Google Drive.
-* **Evaluation Metrics:** Added Macro F1 score evaluation.
-* **Cross-Modal Retrieval:** Implemented rigorous Image-to-Text (i2t) and Text-to-Image (t2i) retrieval evaluation loops.
-
-### 🔹 v5 — Generalization Improvements
-* **Hyperparameter Tuning:** Reduced `MAX_LEN` to 16, Epochs to 10, and `LR` to `1e-5`. Added Weight Decay (`1e-4`).
-* **Model Architecture:** Partially unfroze ResNet50 (last 30 layers trainable). Added Dropout (0.2) and LayerNormalization to projection heads.
-* **Optimizer:** Switched to `AdamW`.
-* **Data Augmentation:** Added robust training augmentations (random flips, brightness, contrast, saturation, hue).
-
-</details>
-
-### 🔹 v6 — (Latest) Prompt Improvements
-* **Dynamic Prompt Ensembling:** Removed static prompts. Introduced a `PROMPT_TEMPLATES` list (e.g., *"A histopathology image of {}."*, *"An H&E stained tissue image showing {}."*) randomly sampled during training to improve text encoder robustness.
-* **Label Encoding:** Updated extraction loops to store numerical class indices instead of strings to reduce memory overhead.
-* **tf.data Pipeline Updates:** Refactored map functions to generate dynamic prompts on the fly during training, and standardized prompts during evaluation.
-* **Visualization Checks:** Updated visualization helpers to dynamically map numeric labels back to human-readable text.
+Every other notebook in this directory changes exactly one of those variables relative to the baseline, so the resulting deltas are attributable.

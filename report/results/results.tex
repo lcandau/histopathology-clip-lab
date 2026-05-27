@@ -176,7 +176,6 @@ DINOv2 image encoder    & DINOv2 frozen               & BERT frozen             
 \end{itemize}
 
 
-
 \section{PLIP zero-shot comparison}
 \label{sec:results-plip}
 
@@ -247,6 +246,7 @@ DINOv2 image encoder    & DINOv2 frozen               & BERT frozen             
     \item Feature adaptation confirmed as the bigger lever in \S\ref{sec:results-adaptation}; PLIP's frozen-domain gain is one-third of unfreezing's frozen-vs-adapted gain.
 \end{itemize}
 
+
 \section{Plain image classifier on the same features}
 \label{sec:results-linear-probe}
 \begin{itemize}
@@ -294,6 +294,7 @@ DINOv2 image encoder    & DINOv2 frozen               & BERT frozen             
     \label{fig:plain-classifier-umap}
 \end{figure}
 
+
 \section{Feature-level adaptation: partial unfreezing}
 \label{sec:results-adaptation}
 
@@ -340,6 +341,7 @@ DINOv2 image encoder    & DINOv2 frozen               & BERT frozen             
     \caption{Unfreeze30 shared UMAP of test image embeddings and the five class-prompt embeddings (cosine metric), in two views from the same fit. Compare with the baseline UMAP in Figure~\ref{fig:baseline-umap} --- the unfrozen-tail embedding space shows tighter, better-separated class clusters and prompt markers that sit clearly inside their own cluster.}
     \label{fig:unfreeze30-umap}
 \end{figure}
+
 
 \section{Stain normalization ablation}
 \label{sec:results-stain}
@@ -527,6 +529,7 @@ The 3-way head-to-head above isolates the stain-normalization method at a fixed 
     \item Caveats: single seed per condition, single reference patch. Reference rotation and a more robust NMF setup (higher \texttt{max\_iter}, different init) are left as future work.
 \end{itemize}
 
+
 \section{Biomedical text encoder ablation}
 \label{sec:results-biotext}
 \begin{itemize}
@@ -603,13 +606,28 @@ We evaluate four LC25000-trained CLIP variants, a domain-pretrained reference (P
     \item \textbf{Caveats.} (1) We restrict the eval to NORM + TUM because no other NCT class maps to an LC25000 prompt; a richer label space (e.g., adding ``stroma'' / ``lymphocyte'' prompts to the model at training time) might widen the comparison. (2) NCT-CRC-HE-7K is itself colour-normalised; an experiment on the unnormalised NCT-CRC-HE-100K-NONORM variant would test whether the Macenko-at-OOD breakage is specific to double-normalization. (3) The class labels themselves are not fully aligned across datasets: NCT \texttt{TUM} is specifically ``colorectal adenocarcinoma epithelium'' (with separate parallel classes for cancer-associated stroma, mucus, debris, lymphocytes), whereas LC25000 \texttt{colon adenocarcinoma} is a patient-level patch label that may include adjacent stroma, lymphocytes, and mucus together. Same for \texttt{NORM} vs \texttt{benign colon tissue}. Part of the transfer gap is a label-granularity mismatch, not just imaging shift. (4) Magnification is explicit for NCT (0.5\,$\mu$m/px, $\approx 20\times$) but not stated in the LC25000 paper; visual inspection suggests $\sim 20\times$ but a small mismatch in microns-per-pixel would shift the effective field of view at the model's input. (5) Single seed per condition; the disambiguation rows share a checkpoint with their main counterparts, so the comparison there is not an independent replicate but a controlled input-side ablation.
 \end{itemize}
 
+
 \section{Image encoder family}
 \label{sec:results-image-enc}
 \begin{itemize}
-    \item Same text encoder/prompt/split/loss/metrics; image encoder swapped.
-    \item DINOv2 and/or OpenAI CLIP ViT-B/16; supervised vs self-supervised pretraining.
-    \item Deferred: not run in this project.
+    \item Same text encoder/prompt/split/loss/metrics.
+    \item DINOv2 swap, optionally OpenAI CLIP ViT-B/16.
+    \item Self-supervised vs supervised pretraining on the same downstream task.
 \end{itemize}
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|l|c|c|c|c|}
+    \hline
+    \textbf{Image encoder} & \textbf{Accuracy} & \textbf{Balanced acc.} & \textbf{Macro F1} & \textbf{Weighted F1} \\ \hline
+    ResNet50 (baseline)             & 0.6356 & 0.6356 & 0.6273 & 0.6273 \\ \hline
+    PLIP ViT-B/16 (zero-shot)       & 0.6980 & 0.6980 & 0.7004 & 0.7004 \\ \hline
+    OpenAI CLIP ViT-B/16            & --- & --- & --- & --- \\ \hline
+    DINOv2                          & --- & --- & --- & --- \\ \hline
+    \end{tabular}
+    \caption{Image-encoder family comparison.}
+    \label{tab:image-encoder-comparison}
+\end{table}
 
 
 \section{Discussion}
