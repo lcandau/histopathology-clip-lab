@@ -1,0 +1,79 @@
+{
+  "dataset": "CRC-VAL-HE-7K",
+  "source": "Kather et al. 2019, Zenodo 1214456",
+  "n_patches": 1974,
+  "nct_classes_evaluated": ["NORM", "TUM"],
+  "lc25000_class_prompts_kept": 5,
+  "variants": [
+    {
+      "key": "baseline",
+      "display": "Baseline CLIP (raw, frozen)",
+      "checkpoint": "exp_01_baseline/baseline",
+      "ood_inputs": "raw",
+      "accuracy": 0.1327,
+      "balanced_accuracy": 0.1399,
+      "macro_f1": 0.2134,
+      "weighted_f1": 0.2096
+    },
+    {
+      "key": "stain_macenko",
+      "display": "Macenko CLIP (frozen)",
+      "checkpoint": "exp_04_stain_normalization/stain_macenko",
+      "ood_inputs": "macenko",
+      "accuracy": 0.0000,
+      "balanced_accuracy": 0.0000,
+      "macro_f1": 0.0000,
+      "weighted_f1": 0.0000
+    },
+    {
+      "key": "unfreeze30",
+      "display": "Unfreeze30 CLIP (raw)",
+      "checkpoint": "exp_01_baseline/unfreeze30",
+      "ood_inputs": "raw",
+      "accuracy": 0.3865,
+      "balanced_accuracy": 0.3167,
+      "macro_f1": 0.3309,
+      "weighted_f1": 0.3966
+    },
+    {
+      "key": "stain_macenko_raw_input",
+      "display": "Macenko ckpt, raw NCT inputs",
+      "checkpoint": "exp_04_stain_normalization/stain_macenko",
+      "ood_inputs": "raw",
+      "accuracy": 0.0922,
+      "balanced_accuracy": 0.0988,
+      "macro_f1": 0.1538,
+      "weighted_f1": 0.1489
+    },
+    {
+      "key": "stain_macenko_unfreeze30",
+      "display": "Macenko + Unfreeze30 (best case)",
+      "checkpoint": "exp_04_stain_normalization/stain_macenko_unfreeze30",
+      "ood_inputs": "macenko",
+      "accuracy": 0.0000,
+      "balanced_accuracy": 0.0000,
+      "macro_f1": 0.0000,
+      "weighted_f1": 0.0000
+    },
+    {
+      "key": "stain_macenko_unfreeze30_raw_input",
+      "display": "Combo ckpt, raw NCT inputs",
+      "checkpoint": "exp_04_stain_normalization/stain_macenko_unfreeze30",
+      "ood_inputs": "raw",
+      "accuracy": 0.1449,
+      "balanced_accuracy": 0.1216,
+      "macro_f1": 0.2011,
+      "weighted_f1": 0.2385
+    },
+    {
+      "key": "plip_zeroshot",
+      "display": "PLIP zero-shot",
+      "checkpoint": null,
+      "ood_inputs": "raw",
+      "accuracy": 0.5572,
+      "balanced_accuracy": 0.6095,
+      "macro_f1": 0.6610,
+      "weighted_f1": 0.6306
+    }
+  ]
+}
