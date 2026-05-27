@@ -1,0 +1,7 @@
+{
+  "version": "plain_classifier",
+  "accuracy": 0.644,
+  "balanced_accuracy": 0.644,
+  "macro_f1": 0.6369,
+  "weighted_f1": 0.6369
+}
