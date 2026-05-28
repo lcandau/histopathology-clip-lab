@@ -1,0 +1,16 @@
+{
+  "experiment": "exp_08_plip_backbone",
+  "version": "plip_bert_composed",
+  "image_encoder": "vinid/plip (TFCLIPVisionModel, frozen)",
+  "text_encoder": "bert-base-uncased (HF, frozen)",
+  "prompt_strategy": "composed",
+  "preprocessing": "CLIP-standard mean/std (PLIP_MEAN/PLIP_STD), NHWC->NCHW transpose before vision encoder",
+  "dataset": "LC25000 pre-dedupe (20000 train / 2500 val / 2500 test)",
+  "epochs_run": 24,
+  "val_loss_best": 1.906,
+  "accuracy": 0.9958,
+  "balanced_accuracy": 0.9958,
+  "macro_f1": 0.9958,
+  "weighted_f1": 0.9958,
+  "note": "PLIP vision encoder (ViT-B/32) + BERT text encoder + composed prompt. Same projection-head architecture as exp_06 bert_composed. In-dist saturates like the rest. Per-class info available in the executed notebook output."
+}
