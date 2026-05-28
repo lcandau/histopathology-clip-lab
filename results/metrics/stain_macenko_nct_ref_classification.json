@@ -1,0 +1,59 @@
+{
+  "experiment": "exp_04_stain_normalization",
+  "version": "stain_macenko_nct_ref",
+  "stain_method": "macenko",
+  "macenko_reference": "src/data/macenko_reference_nct_norm.png  (NORM-TCGA-AASSYQPA from CRC-VAL-HE-7K)",
+  "train_set_size": 18976,
+  "val_set_size": 2372,
+  "test_set_size": 2372,
+  "epochs_run": 19,
+  "val_loss_best": 1.9353,
+  "accuracy": 0.9857,
+  "balanced_accuracy": 0.9856,
+  "macro_f1": 0.9856,
+  "weighted_f1": 0.9857,
+  "per_class": {
+    "benign lung tissue": {
+      "precision": 0.997899,
+      "recall": 1.0,
+      "f1-score": 0.998948,
+      "support": 475
+    },
+    "lung adenocarcinoma": {
+      "precision": 0.962105,
+      "recall": 0.96822,
+      "f1-score": 0.965153,
+      "support": 472
+    },
+    "lung squamous cell carcinoma": {
+      "precision": 0.970149,
+      "recall": 0.961945,
+      "f1-score": 0.96603,
+      "support": 473
+    },
+    "benign colon tissue": {
+      "precision": 1.0,
+      "recall": 0.997904,
+      "f1-score": 0.998951,
+      "support": 477
+    },
+    "colon adenocarcinoma": {
+      "precision": 0.997899,
+      "recall": 1.0,
+      "f1-score": 0.998948,
+      "support": 475
+    },
+    "macro avg": {
+      "precision": 0.985611,
+      "recall": 0.985614,
+      "f1-score": 0.985606,
+      "support": 2372
+    },
+    "weighted avg": {
+      "precision": 0.985665,
+      "recall": 0.985666,
+      "f1-score": 0.98566,
+      "support": 2372
+    }
+  }
+}

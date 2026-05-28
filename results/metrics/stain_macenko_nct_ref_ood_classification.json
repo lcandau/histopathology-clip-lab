@@ -1,0 +1,23 @@
+{
+  "experiment": "exp_07_ood_eval",
+  "variant": "stain_macenko_nct_ref",
+  "checkpoint": "exp_04_stain_normalization/stain_macenko_nct_ref/weights.weights.h5",
+  "ood_dataset": "CRC-VAL-HE-7K (Kather 2019)",
+  "classes_evaluated": ["NORM", "TUM"],
+  "class_mapping": {
+    "NORM": "benign colon tissue (LC class 3)",
+    "TUM":  "colon adenocarcinoma (LC class 4)"
+  },
+  "n_tiles": 1974,
+  "n_norm":  741,
+  "n_tum":   1233,
+  "note": "Macenko applied to LC25000 at training time with first NORM tile from CRC-VAL-HE-7K as reference. NCT inputs fed RAW at inference (no second Macenko pass). Result: slight regression vs raw baseline (0.844 vs 0.866 macro F1). Documented as null/negative finding — stain normalisation did NOT improve OOD generalisation here.",
+  "accuracy":          0.8642,
+  "balanced_accuracy": 0.8264,
+  "macro_f1":          0.8443,
+  "weighted_f1":       0.8730,
+  "per_class": {
+    "benign colon tissue":  {"precision": 0.9488, "recall": 0.6748, "f1-score": 0.7886, "support":  741},
+    "colon adenocarcinoma": {"precision": 0.8334, "recall": 0.9781, "f1-score": 0.9000, "support": 1233}
+  }
+}
