@@ -35,17 +35,47 @@ INDEX_TO_NAME = {c.index: c.name for c in CLASS_INFO}
 ID_TO_INDEX = {c.id: c.index for c in CLASS_INFO}
 
 
-def discover_records(dataset_root: str | os.PathLike) -> tuple[np.ndarray, np.ndarray]:
-    """Return (paths, class_indices) for every JPEG under dataset_root."""
+_DEDUPE_EXCLUSIONS_PATH = Path(__file__).with_name("lc25000_dedupe_exclusions.json")
+
+
+def _load_dedupe_exclusions() -> frozenset[str]:
+    """Set of basenames to skip because they are byte-duplicates of another file
+    in the dataset. LC25000 contains ~1,280 such duplicates which would otherwise
+    cause train/test leakage under a random split."""
+    if not _DEDUPE_EXCLUSIONS_PATH.is_file():
+        return frozenset()
+    payload = json.loads(_DEDUPE_EXCLUSIONS_PATH.read_text())
+    return frozenset(payload.get("excluded_basenames", []))
+
+
+def discover_records(
+    dataset_root: str | os.PathLike,
+    *,
+    apply_dedupe: bool = True,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return (paths, class_indices) for every JPEG under dataset_root.
+
+    By default (apply_dedupe=True) skips ~1,280 byte-duplicate files listed in
+    lc25000_dedupe_exclusions.json — these would otherwise leak from train to
+    test under a random split because they are byte-identical copies of files
+    kept in the dataset.
+
+    Pass apply_dedupe=False to reproduce the legacy 25,000-file behaviour (used
+    by pre-deduplication runs).
+    """
     base = Path(dataset_root) / "lung_colon_image_set"
+    excluded = _load_dedupe_exclusions() if apply_dedupe else frozenset()
     paths: list[str] = []
     indices: list[int] = []
     for info in CLASS_INFO:
         class_dir = base / info.subdir
         for fname in sorted(os.listdir(class_dir)):
-            if fname.lower().endswith((".jpg", ".jpeg")):
-                paths.append(str(class_dir / fname))
-                indices.append(info.index)
+            if not fname.lower().endswith((".jpg", ".jpeg")):
+                continue
+            if fname in excluded:
+                continue
+            paths.append(str(class_dir / fname))
+            indices.append(info.index)
     return np.array(paths), np.array(indices, dtype=np.int32)
 
 

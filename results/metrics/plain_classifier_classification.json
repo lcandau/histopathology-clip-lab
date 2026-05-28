@@ -1,7 +1,16 @@
 {
-  "version": "plain_classifier",
-  "accuracy": 0.644,
-  "balanced_accuracy": 0.644,
-  "macro_f1": 0.6369,
-  "weighted_f1": 0.6369
+  "experiment":         "exp_03_plain_classifier",
+  "version":            "plain_classifier",
+  "preprocessing":      "/255.0 via src.data.images.load_image (corrected)",
+  "dataset":            "LC25000 (canonical split file pre-existed on Drive; dedupe did not re-trigger)",
+  "train_set_size":     20000,
+  "val_set_size":       2500,
+  "test_set_size":      2500,
+  "epochs_run":         15,
+  "val_loss_best":      0.01456,
+  "accuracy":           0.9952,
+  "balanced_accuracy":  0.9952,
+  "macro_f1":           0.9952,
+  "weighted_f1":        0.9952,
+  "note": "Trained with corrected preprocessing on exp_07 branch. Old broken-preprocessing run gave macro_f1=0.6369; the 36-point delta is the magnitude of the keras_hub-Caffe preprocessing bug we caught."
 }
