@@ -1,0 +1,23 @@
+{
+  "experiment":         "exp_07_ood_eval",
+  "variant":            "plain_classifier",
+  "checkpoint":         "exp_03_plain_classifier/plain_classifier/weights.weights.h5",
+  "ood_dataset":        "CRC-VAL-HE-7K (Kather 2019)",
+  "classes_evaluated":  ["NORM", "TUM"],
+  "class_mapping": {
+    "NORM": "benign colon tissue (LC class 3)",
+    "TUM":  "colon adenocarcinoma (LC class 4)"
+  },
+  "n_tiles":            1974,
+  "n_norm":             741,
+  "n_tum":              1233,
+  "note": "Plain ResNet50+softmax classifier; argmax restricted to colon classes [3, 4] for fair OOD comparison with CLIP variants. Result: plain_classifier OOD F1 (0.8802) marginally exceeds baseline CLIP OOD F1 (0.866), suggesting CLIP-style training does NOT add OOD generalisation value over plain supervised CE on this LC25000 -> NCT-CRC transfer.",
+  "accuracy":           0.8875,
+  "balanced_accuracy":  0.8806,
+  "macro_f1":           0.8802,
+  "weighted_f1":        0.8875,
+  "per_class": {
+    "benign colon tissue":  {"precision": 0.8483, "recall": 0.8529, "f1-score": 0.8506, "support":  741},
+    "colon adenocarcinoma": {"precision": 0.9113, "recall": 0.9084, "f1-score": 0.9098, "support": 1233}
+  }
+}
