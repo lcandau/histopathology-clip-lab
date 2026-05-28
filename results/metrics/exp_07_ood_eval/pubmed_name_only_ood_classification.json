@@ -1,0 +1,14 @@
+{
+  "experiment": "exp_07_ood_eval",
+  "variant": "pubmed_name_only",
+  "encoder_key": "pubmed",
+  "encoder_id": "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract",
+  "prompt_strategy": "name_only",
+  "checkpoint": "exp_06_biomed_text/pubmed_name_only/weights.weights.h5",
+  "ood_dataset": "CRC-VAL-HE-7K",
+  "n_tiles": 1974,
+  "accuracy": 0.8607,
+  "balanced_accuracy": 0.8667,
+  "macro_f1": 0.8554,
+  "note": "Argmax restricted to colon class indices [3, 4]. Per-class F1 available in the executed notebook output / classification.json on the Colab session disk."
+}

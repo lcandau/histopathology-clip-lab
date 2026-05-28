@@ -1,0 +1,10 @@
+{
+  "experiment": "exp_06_biomed_text",
+  "version": "pubmed_name_only",
+  "encoder_id": "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract",
+  "prompt_strategy": "name_only",
+  "dataset": "LC25000 (pre-dedupe canonical split: 20000 train / 2500 val / 2500 test)",
+  "macro_f1": 0.9953,
+  "prompt_separation": 0.7942,
+  "note": "In-dist eval. All 6 cells saturate at 0.995-0.999 -- LC25000 in-dist saturation across all text encoders."
+}

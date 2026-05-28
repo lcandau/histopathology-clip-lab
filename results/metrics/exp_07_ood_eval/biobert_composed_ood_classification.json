@@ -1,0 +1,14 @@
+{
+  "experiment": "exp_07_ood_eval",
+  "variant": "biobert_composed",
+  "encoder_key": "biobert",
+  "encoder_id": "dmis-lab/biobert-v1.1",
+  "prompt_strategy": "composed",
+  "checkpoint": "exp_06_biomed_text/biobert_composed/weights.weights.h5",
+  "ood_dataset": "CRC-VAL-HE-7K",
+  "n_tiles": 1974,
+  "accuracy": 0.8247,
+  "balanced_accuracy": 0.8271,
+  "macro_f1": 0.8177,
+  "note": "Argmax restricted to colon class indices [3, 4]. Per-class F1 available in the executed notebook output / classification.json on the Colab session disk."
+}
