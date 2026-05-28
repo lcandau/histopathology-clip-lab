@@ -1,0 +1,7 @@
+encoder,strategy,macro_f1,prompt_separation
+bert,name_only,0.9987,0.7203
+bert,composed,0.9987,0.6103
+biobert,name_only,0.9983,0.7836
+biobert,composed,0.9983,0.8503
+pubmed,name_only,0.9953,0.7942
+pubmed,composed,0.9962,0.7957

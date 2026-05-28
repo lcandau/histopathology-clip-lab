@@ -1,0 +1,10 @@
+{
+  "experiment": "exp_06_biomed_text",
+  "version": "biobert_composed",
+  "encoder_id": "dmis-lab/biobert-v1.1",
+  "prompt_strategy": "composed",
+  "dataset": "LC25000 (pre-dedupe canonical split: 20000 train / 2500 val / 2500 test)",
+  "macro_f1": 0.9983,
+  "prompt_separation": 0.8503,
+  "note": "In-dist eval. All 6 cells saturate at 0.995-0.999 -- LC25000 in-dist saturation across all text encoders."
+}
