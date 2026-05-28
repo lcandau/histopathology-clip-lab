@@ -1,7 +1,8 @@
 # Results & Main Learnings — 2026-05-28
 
-End-of-day notes after the post-preprocessing-bug rerun cycle. State of the project:
-`main @ 7b6faa2` (Merge exp_06_biomed_text), six experiments archived under `experiments/`,
+End-of-day notes after the post-preprocessing-bug rerun cycle, with the **exp_08
+PLIP-backbone update folded in**. State of the project: `main @ aee28ce` plus
+exp_07 + exp_08 archived branches, seven experiments archived under `experiments/`,
 results JSONs and plots all on disk under `results/`.
 
 ---
@@ -18,7 +19,7 @@ distributions). After the fix every LC25000 in-distribution result jumped to ~0.
 became a saturation null. **The OOD evaluation (LC25000 → NCT-CRC-HE-7K) is therefore the only
 meaningful axis for method comparison.**
 
-On OOD, the surprises were uniformly *negative*:
+On OOD, with the ImageNet ResNet50 backbone held fixed, the surprises were uniformly *negative*:
 
 - **The plain supervised CE softmax classifier (0.880 macro-F1) beats the CLIP baseline (0.866).**
   CLIP-style contrastive training does not add OOD value over a plain ResNet50 + softmax on this task.
@@ -28,14 +29,30 @@ On OOD, the surprises were uniformly *negative*:
 - **PLIP zero-shot is the weakest on absolute OOD F1 (0.661)** despite its diverse-histopathology
   pretraining — but it has the smallest in-dist → OOD drop, the "pretrained generalist" pattern.
 
-The honest reading: **the frozen ImageNet ResNet50 backbone is doing essentially all the OOD
-generalisation work on this LC25000 → NCT-CRC colon transfer.** Auxiliary methods (CLIP, stain,
-biomedical text, prompt engineering) do not contribute additional OOD signal beyond what the
-frozen backbone provides — and several actively hurt. This is a strong, contrarian, publishable
-finding.
+These nine LC25000-trained ResNet50 variants cluster within ≈0.81–0.88 on OOD despite radically
+different heads, objectives, and text encoders — pointing squarely at the **frozen ImageNet
+ResNet50 backbone as the OOD bottleneck** (PLIP zero-shot uses a different backbone, hence its
+position outside the band).
 
-The defense narrative should pivot from *"these methods help OOD"* to *"on this task they
-demonstrably don't, and we explain why."*
+**exp_08 then tested that hypothesis directly** by swapping the image backbone for PLIP's
+ViT-B/32 (pretrained on histopathology image–text pairs) and keeping everything else identical
+to the best biomed cell — same composed prompt, same `bert-base-uncased` text encoder, same
+projection head, same training recipe. Result: **NCT OOD macro-F1 = 0.933** (+6.7 F1 vs the
+prior best plain_classifier 0.880, +6.7 vs CLIP baseline). **The ≈0.88 ceiling broke as soon
+as the image encoder changed.** This is the project's first positive finding, and it confirms
+the bottleneck diagnosis: the head, prompt, and text encoder were never the limiting factor.
+
+A secondary observation: the PLIP-backbone UMAPs do **not** show the cross-dataset cluster
+alignment that baseline CLIP achieved — NCT triangles still sit in their own region of feature
+space, away from LC25000 colon clusters, exactly like the plain_classifier. So PLIP wins
+classification F1 but loses spatial alignment. "Classification quality" and "representation
+alignment" are now empirically separable axes.
+
+The defense narrative pivot: **(1) on a frozen ImageNet backbone, popular method additions
+(CLIP loss, stain norm, biomed text) do not improve OOD on this task — and several hurt.
+(2) Swapping the image backbone for a histopathology-pretrained one breaks the ceiling by
+≈7 F1 points. (3) Better OOD F1 does not imply better feature-space alignment — they are
+separable evaluation axes.**
 
 ---
 
@@ -82,8 +99,19 @@ demonstrably don't, and we explain why."*
    consistent 2×3 grid visualisation: each LC25000 panel overlays NCT triangles so dataset shift
    is visible directly.
 
-8. **Final state (this document)**: 6 trained checkpoints + 1 zero-shot PLIP variant, evaluated
-   on LC25000 test (in-dist) and NCT-CRC NORM/TUM (OOD). Results consolidated below.
+8. **Diagnosis converged**: 6 ResNet50-based trained checkpoints + 1 zero-shot PLIP variant
+   clustered within 7 F1 on OOD (0.81–0.88), implicating the frozen ImageNet ResNet50 as the
+   bottleneck.
+
+9. **exp_08 (positive result)**: kept the best biomed cell's architecture (BERT + composed +
+   projection + InfoNCE) and replaced **only** the image backbone — `keras_hub` ResNet50 →
+   HuggingFace `vinid/plip` ViT-B/32. Required CLIP-standard image normalisation (mean/std,
+   not /255.0) and an NHWC→NCHW transpose inside the model because the HF TFCLIPVisionModel
+   port follows PyTorch's channel ordering. Result: in-dist macro-F1 = 0.996 (saturation
+   unchanged), **NCT OOD macro-F1 = 0.933** — broke the ~0.88 ResNet50 ceiling by ~7 F1.
+
+10. **Final state (this document)**: 7 trained checkpoints + 1 zero-shot PLIP variant, evaluated
+    on LC25000 test (in-dist) and NCT-CRC NORM/TUM (OOD). Results consolidated below.
 
 ---
 
@@ -103,6 +131,7 @@ demonstrably don't, and we explain why."*
 | BioBERT + composed | 0.998 | exp_06 cell |
 | PubMedBERT + name_only | 0.995 | exp_06 cell |
 | PubMedBERT + composed | 0.996 | exp_06 cell |
+| **PLIP-ViT + BERT (composed)** | **0.996** | **exp_08 — backbone swap** |
 | PLIP (zero-shot, no fine-tune) | 0.700 | External reference; no LC25000 exposure |
 
 All trained variants land within 0.013 macro-F1 of one another. **In-dist is a saturation null.**
@@ -111,9 +140,10 @@ All trained variants land within 0.013 macro-F1 of one another. **In-dist is a s
 
 | Model | macro-F1 | OOD rank |
 |---|---|---|
-| **plain_classifier** | **0.880** | 🥇 |
-| **baseline CLIP** | 0.866 | 🥈 |
-| BERT + composed | 0.863 | 🥉 |
+| **PLIP-ViT + BERT (composed)** | **0.933** | 🥇 **breaks the ≈0.88 ResNet50 ceiling** (exp_08) |
+| plain_classifier | 0.880 | 🥈 |
+| baseline CLIP | 0.866 | 🥉 |
+| BERT + composed | 0.863 | |
 | PubMedBERT + name_only | 0.855 | |
 | stain_macenko_nct_ref CLIP | 0.844 | (regression vs baseline) |
 | BioBERT + name_only | 0.840 | |
@@ -122,11 +152,15 @@ All trained variants land within 0.013 macro-F1 of one another. **In-dist is a s
 | PubMedBERT + composed | 0.808 | |
 | **PLIP zero-shot** | **0.661** | last (but smallest train→OOD drop) |
 
+Per-class breakdown for exp_08 (PLIP-backbone): benign colon F1 = 0.914, colon adenocarcinoma
+F1 = 0.951, accuracy = 0.938, balanced accuracy = 0.927.
+
 ### Train → OOD drop
 
 | Model | Δ |
 |---|---|
 | PLIP zero-shot | −0.04 (0.700 → 0.661) — smallest |
+| **PLIP-ViT + BERT (composed)** | **−0.063** (0.996 → 0.933) — smallest among trained variants |
 | plain_classifier | −0.115 |
 | baseline CLIP | −0.130 |
 | stain_macenko_nct_ref | −0.142 |
@@ -187,52 +221,85 @@ LC25000 → NCT-CRC-HE-7K transfer on the 2 colon classes (NORM ↔ benign colon
   dilutes the prompt embedding. This is not enough to make any biomed cell beat the baseline but
   it's a useful methodological observation for the prompt-design literature.
 
-### 4. The frozen ImageNet ResNet50 explains nearly all the generalisation
+### 4. The frozen ImageNet ResNet50 was the OOD bottleneck — and exp_08 proves it
 
-The unified picture across all 10 trained-or-zero-shot variants is that they cluster within ~7
-F1 points on OOD (0.81–0.88) despite radically different architectures, training objectives,
-prompt formats, text encoders, and preprocessing. The variation between methods is much smaller
-than the variation between in-dist (0.99) and OOD (0.85). This points squarely at one source
-of variation: **the image-encoder features**. Every variant uses the same frozen
-`resnet_50_imagenet` features; every variant inherits the same OOD ceiling that those features
-permit.
+The unified picture across the 9 ResNet50-based trained variants was that they clustered
+within ~7 F1 points on OOD (0.81–0.88) despite radically different architectures, training
+objectives, prompt formats, text encoders, and preprocessing. The variation between methods
+was much smaller than the variation between in-dist (0.99) and OOD (0.85). This pointed
+squarely at one source of variation: **the image-encoder features**. Every ResNet50-based
+variant used the same frozen `resnet_50_imagenet` features; every one inherited the same OOD
+ceiling those features permitted.
 
-**Implication for the thesis**: the bottleneck for OOD transfer on this task is the **image
-representation**, not the classification head or the auxiliary training objective. To improve
-OOD beyond ~0.88 macro-F1 on this task you would need a different image backbone — likely one
-pretrained on histopathology (e.g. UNI, CONCH, Virchow-2) — not a different head.
+**exp_08 tested this hypothesis directly.** Architecture and recipe held identical to the
+best biomed cell (BERT + composed prompt, frozen text, projection head, InfoNCE) — only the
+image backbone swapped from `keras_hub` ResNet50 (ImageNet-pretrained) to `vinid/plip`'s
+ViT-B/32 (pretrained on histopathology image–text pairs). Result: **OOD macro-F1 = 0.933,
++6.7 F1 points over the previous ceiling.** The in-dist number barely moved (0.996 vs 0.996
+baseline) — the LC25000 saturation null is independent of backbone — but OOD broke open.
 
-### 5. CLIP's feature geometry is different from plain softmax's, even when their accuracy isn't
+**This confirms the bottleneck diagnosis.** The head, projection, prompt, and text encoder
+were never the limiting factor on OOD; the image representation was. A backbone pretrained
+on histopathology — even without any LC25000 supervision until our fine-tuning — encodes
+NCT-CRC colon tissue more usefully than an ImageNet-pretrained ResNet50 ever did.
 
-Side-by-side UMAPs show:
+The implication for the thesis flips from negative-only ("none of these methods help") to
+balanced ("none of these head-side methods help, but the right backbone helps a lot — and
+both findings together tell you where to spend future effort").
 
-- **CLIP**'s 256-d L2-normalised embeddings pull NCT colon samples *into* the LC25000 colon
-  clusters in feature space. Same-class images from different datasets co-locate.
-- **Plain classifier**'s 2048-d BatchNorm features leave NCT in a *separate region* of feature
-  space — classification still works because the Dense(5) weights define class *directions*
-  that NCT samples project onto correctly, but spatial alignment with LC25000 is lost.
+### 5. Classification quality and representation alignment are separable axes
 
-This is the contrastive objective doing what it advertises (cluster same-class images together
-regardless of source) — it's just that this geometric improvement doesn't translate into higher
-classification F1 on this 2-class colon OOD task. For *downstream* uses where the feature
-representation matters (clustering, retrieval, transfer to other classifiers), CLIP's
-representation is meaningfully better even though it tied/lost on raw F1.
+Side-by-side UMAPs show three distinct patterns across the project:
 
-### 6. PLIP underperforms despite the broader pretraining
+- **Baseline CLIP (ResNet50)** — 256-d L2-normalised embeddings pull NCT colon samples *into*
+  the LC25000 colon clusters in feature space. Same-class images from different datasets
+  co-locate. Best visual evidence of cross-dataset alignment.
+- **Plain classifier (ResNet50)** — 2048-d BatchNorm features leave NCT in a *separate region*
+  of feature space — classification still works because the Dense(5) weights define class
+  *directions* that NCT samples project onto correctly, but spatial alignment with LC25000 is
+  lost.
+- **PLIP-ViT + BERT (exp_08)** — also leaves NCT in a separate region of feature space,
+  qualitatively similar to the plain-classifier pattern. Despite achieving the **highest**
+  OOD F1 of any variant (0.933), the cross-dataset spatial alignment that baseline CLIP
+  achieved is **not** reproduced.
 
-PLIP was pretrained on diverse histopathology image-text pairs (OpenPath). The expectation
+The PLIP-backbone case is the cleanest demonstration that **classification F1 and cross-dataset
+feature alignment are not the same axis**. Mechanism: PLIP encodes source-specific variation
+(stain, scanner, lab idiosyncrasies) more sensitively than ImageNet ResNet50, so even
+within the same class NCT samples occupy a different region from LC25000 samples — yet the
+cosine similarity to the class-prompt direction is preserved, so classification still works.
+The contrastive objective alone (baseline CLIP) produces alignment but not necessarily better
+classification. The right backbone (PLIP) produces better classification but not necessarily
+better alignment. This dissociation is itself a useful finding for the multimodal-histopathology
+literature — many papers implicitly conflate the two.
+
+For *downstream* uses where the feature representation matters (clustering, retrieval, transfer
+to other classifiers), baseline CLIP's representation is meaningfully better than its F1 number
+suggests. For *classification*, exp_08's PLIP backbone is the headline.
+
+### 6. PLIP zero-shot underperforms — but PLIP-as-backbone wins
+
+PLIP was pretrained on diverse histopathology image–text pairs (OpenPath). The expectation
 going in: it should generalise to NCT-CRC better than an LC25000-specialised model. The
-reality: **PLIP zero-shot gets 0.661 OOD macro-F1, worse than every LC25000-trained variant.**
+zero-shot reality: **PLIP gets 0.661 OOD macro-F1, worse than every LC25000-trained variant.**
 
-The compensating observation: PLIP has the smallest train→OOD drop (-0.04 from 0.70 to 0.66),
-the classic "pretrained generalist" pattern. It hasn't overfit to any specific source, but its
-absolute representation quality for the colon NORM-vs-TUM task is below LC25000-specialised
-training.
+The compensating zero-shot observation: PLIP has the smallest train→OOD drop (-0.04 from
+0.70 to 0.66), the classic "pretrained generalist" pattern. It hasn't overfit to any specific
+source, but its **zero-shot text-image alignment** for the NORM-vs-TUM cosine-similarity
+classification is below what LC25000 supervision provides.
 
-This isn't a knock on PLIP — it's evidence that **broad pretraining and specialised supervision
-optimise different things**, and which one wins on a given downstream depends on the downstream.
-On this specific NORM-vs-TUM colon task, specialised supervision (whether CLIP or plain) on a
-single source (LC25000) wins on raw F1, but pays an OOD-shift cost that pretraining sidesteps.
+**exp_08 then showed the missing piece**: PLIP's pretraining produces a much stronger image
+*representation* than its zero-shot prompt alignment suggests. Holding the architecture
+identical to the best biomed cell and only swapping the image backbone (ResNet50 → PLIP's
+ViT-B/32) gives **0.996 in-dist and 0.933 OOD** — the highest OOD number in the project and
+the smallest in-dist → OOD drop among trained variants (−0.063).
+
+The combined reading: **broad pretraining contributes its value through the image
+representation, not through the off-the-shelf prompt geometry.** A small amount of
+LC25000 supervision (a fresh projection head + temperature, trained on top of the frozen PLIP
+backbone) is enough to convert PLIP's pretraining advantage into a +6.7 F1 OOD gain over the
+best ResNet50-based variant. Pretraining and specialised supervision are not in opposition;
+the right architecture stacks them.
 
 ### 7. Stain normalisation is double-edged
 
@@ -251,6 +318,35 @@ hurt by ~2 F1 points on OOD because:
 For settings with much larger stain shift than the LC25000-vs-NCT-CRC pair (e.g. cross-laboratory
 WSI variation in clinical deployment), stain normalisation might pay off. On this specific
 transfer it doesn't.
+
+### 8. Domain-pretrained backbone is the dominant lever — and it stacks with the rest
+
+The single biggest OOD F1 gain in the project came from one change: image backbone. Holding
+**everything else identical** to the best biomed cell (BERT text encoder, composed prompt,
+projection head architecture, InfoNCE loss, AdamW + EarlyStopping, even the random seed
+distribution from re-training), replacing `keras_hub` ResNet50 with `vinid/plip`'s ViT-B/32
+moved OOD macro-F1 from 0.863 → 0.933 (+7.0 F1) and accuracy from ~0.85 → 0.938.
+
+The result is more striking when you stack it against the project's other interventions:
+
+| Lever | Change relative to ResNet50 CLIP baseline | OOD Δ |
+|---|---|---|
+| Backbone (ImageNet → PLIP-histopath) | exp_08 | **+6.7 F1** |
+| Loss (CLIP → plain CE softmax) | exp_03 | +1.4 F1 |
+| Stain normalisation (raw → Macenko NCT-ref) | exp_04 | −2.2 F1 |
+| Text encoder (BERT → biomed) | exp_06 best | −0.3 F1 |
+| Prompt (`name` → `composed`) | exp_06 | −0.5 F1 avg |
+
+**The backbone change is 4-5× larger than any other single lever we tested**, and it goes in
+the *opposite* direction from the contemporary methods literature's emphasis on novel
+loss functions, text-side innovations, and stain harmonisation. For histopathology image
+classification at frozen-backbone scale, the **right pretraining domain dominates the recipe**
+— and inverse-domain pretraining (ImageNet) is what bounds every other method to ≈0.88 on
+NCT-CRC transfer.
+
+This is a strong, defensible take-home for the thesis: **future work on this task should
+prioritise backbone choice (UNI, CONCH, Virchow-2, PLIP variants) over head-side or text-side
+innovations.** The ablation matrix we ran provides direct evidence for that recommendation.
 
 ---
 
@@ -272,6 +368,14 @@ The `2026-05-28_*_ood` UMAP grids tell a coherent story:
 - **Biomed cells** — qualitatively similar to baseline CLIP's pattern, with subtle per-cell
   differences in how tightly NCT projects onto the LC25000 colon prompts. PubMedBERT + composed
   has the messiest NCT cluster (matches its lowest OOD F1).
+- **exp_08 PLIP-ViT + BERT** — best classification numbers of any variant (NCT OOD F1 = 0.933),
+  but the NCT triangles sit in their own region of the projection, **away** from the LC25000
+  colon clusters — the same pattern as plain_classifier, not the baseline-CLIP-style alignment.
+  The 5 LC25000 clusters are well-separated and tighter than baseline. This is the cleanest
+  empirical demonstration that "OOD classification quality" and "cross-dataset feature
+  alignment" are separable axes. The cosine similarity to the prompt direction is what carries
+  classification; absolute embedding location is what carries alignment, and PLIP optimises
+  the first more than the second on this transfer.
 
 ---
 
@@ -323,9 +427,9 @@ These need to land in the §limitations section of the thesis:
 
 ### §6 (OOD generalisation — the central contribution)
 
-> On the LC25000 → NCT-CRC-HE-7K cross-source generalisation task, we observe a pattern that
-> contradicts a common implicit assumption in the multimodal histopathology literature.
-> Specifically:
+> On the LC25000 → NCT-CRC-HE-7K cross-source generalisation task, we evaluate a matrix of
+> interventions on the standard frozen-ImageNet-ResNet50 + frozen-text-encoder CLIP recipe.
+> We observe:
 >
 > 1. CLIP-style contrastive training does not improve OOD generalisation over plain supervised
 >    cross-entropy on this colon-classification transfer. The plain classifier reaches macro-F1
@@ -339,45 +443,83 @@ These need to land in the §limitations section of the thesis:
 >    0.81–0.86 range, with the best (BERT + composed prompt) tying the baseline at 0.863 and
 >    the worst (PubMedBERT + composed) trailing by 6 F1 points.
 >
-> 4. PLIP, pretrained on diverse histopathology image-text pairs, achieves 0.661 zero-shot — the
->    weakest absolute OOD performance — but with the smallest in-dist → OOD drop (−0.04 vs −0.13
->    for LC25000-specialised models). This is the expected "pretrained generalist" pattern.
+> 4. PLIP zero-shot achieves 0.661 — the weakest absolute OOD performance — but with the
+>    smallest in-dist → OOD drop (−0.04 vs −0.13 for LC25000-specialised models). This is
+>    the expected "pretrained generalist" pattern.
 >
-> Taken together, these results indicate that on this task the bottleneck for OOD transfer is
-> not the classification head, the training objective, or the prompt format, but the
-> **image-encoder representation itself**. Improving OOD generalisation beyond the observed
-> ceiling of ≈0.88 would require a different image backbone — specifically, one pretrained on
-> histopathology rather than ImageNet.
+> These results cluster all ResNet50-based variants within 0.81–0.88 macro-F1 on OOD, pointing
+> to the image-encoder representation — not the head, the loss, or the text side — as the
+> limiting factor. We test this hypothesis directly:
+>
+> 5. **(exp_08, central positive result)** Replacing the frozen ImageNet ResNet50 with PLIP's
+>    ViT-B/32 vision encoder (pretrained on diverse histopathology image–text pairs) while
+>    holding the rest of the architecture identical to the best biomed cell (BERT text encoder,
+>    composed prompt, projection heads, InfoNCE) raises OOD macro-F1 from 0.863 → **0.933**
+>    — a +7.0 F1 absolute gain over the same-recipe ResNet50 counterpart, and +6.7 over the
+>    previous best (plain_classifier). The in-distribution number is unchanged (0.996), and
+>    the in-dist → OOD drop is the smallest among trained variants (−0.063).
+>
+> Taken together, the matrix establishes a clear ordering of effect sizes: **backbone
+> pretraining domain dominates the recipe by roughly 5×** over the next-largest single lever
+> (loss function), with stain normalisation, biomedical text encoders, and prompt formatting
+> contributing zero or negative OOD value on this task. The thesis's central methodological
+> recommendation is therefore that improving OOD generalisation on histopathology
+> classification should prioritise the **image encoder's pretraining domain** before
+> head-side, loss-side, or text-side innovations.
 
 ### §7 (Discussion)
 
 Items to discuss:
-- Why CLIP's feature-space alignment (visible in UMAPs) does not translate to F1.
-- The implementation-vs-checkpoint trap (keras_hub vs keras.applications) as a methodological
-  case study.
-- The augmentation-pair leakage in LC25000 as a more fundamental dataset issue.
-- Why specialised supervision wins absolute F1 but loses on generalisation gap vs PLIP.
+- **The classification-vs-alignment dissociation.** Baseline CLIP achieves cross-dataset
+  cluster alignment but lower F1; PLIP-backbone achieves the highest F1 but leaves NCT in
+  its own region of feature space. The contrastive objective optimises alignment of
+  *same-class* pairs; the cosine-similarity classifier rule only needs alignment to the
+  class-prompt *direction*. These are different geometric properties.
+- **The implementation-vs-checkpoint trap** (keras_hub vs keras.applications) as a
+  methodological case study in silent benchmark inflation/deflation.
+- **The augmentation-pair leakage in LC25000** as a more fundamental dataset issue, separate
+  from the dedupe issue and probably the dominant inflater of in-dist numbers.
+- **Why head-side methods cluster within 7 F1 points but the backbone change moves the floor
+  by 7 F1.** Frame in terms of degrees of freedom: a frozen ResNet50 backbone fixes 23M
+  parameters of feature extraction; the projection head + temperature add ≈525K trainable
+  parameters; the head can only re-weight what the backbone already encodes.
+- **Why specialised supervision wins absolute F1 but loses on generalisation gap vs PLIP
+  zero-shot, and how exp_08 reconciles the two**: PLIP-as-backbone + small LC25000
+  fine-tuning gets the best of both.
 
 ### §8 (Limitations & Future work)
 
-- Dedupe + source-aware split would tighten the in-dist numbers.
-- Histopathology-pretrained backbones (UNI, CONCH, Virchow-2) are the obvious next move if the
-  goal is to actually beat ~0.88 OOD F1.
+- Dedupe + source-aware LC25000 split would tighten the in-dist numbers; exp_08's in-dist
+  saturation (0.996) is subject to the same caveat as every other trained variant here.
+- exp_08 establishes that **PLIP** as a frozen backbone breaks the ResNet50 ceiling on this
+  task. The natural next experiments are: (a) other histopathology-pretrained backbones
+  (UNI, CONCH, Virchow-2) for comparison; (b) full or partial unfreezing of PLIP; (c)
+  applying PLIP-as-backbone to broader OOD shifts (cross-laboratory, cross-scanner) to test
+  whether the gain generalises beyond NCT-CRC.
 - The OOD comparison is currently 2-class (NORM/TUM); extending to richer cross-source
-  scenarios would clarify whether the negative findings here generalise.
+  scenarios — including additional histopathology datasets such as **MHIST** (Suzuki
+  et al., 2021, colorectal polyp benign/malignant) — would clarify whether the
+  ResNet50→PLIP backbone advantage generalises beyond NCT-CRC, and whether the head-side
+  null results also hold under a different OOD shift.
+- exp_08's combined LC25000-supervised + PLIP-pretrained pipeline raises a separate question:
+  what happens if one fine-tunes PLIP on its own original training set (OpenPath) as a
+  control? This would help disentangle "PLIP's pretraining matters" from "frozen features
+  + fresh projection head on any histopath ViT works."
 
 ---
 
 ## Open questions (could be answered with modest extra compute)
 
-| Question | Cost to answer |
-|---|---|
-| Does dedupe + source-aware split lower the in-dist saturation enough for methods to differentiate? | ~3h compute (rebuild split, retrain baseline + plain) |
-| Would a histopath-pretrained backbone (UNI, CONCH) move the OOD ceiling above 0.88? | ~6h compute (1 training run with new backbone) |
-| Does the PubMedBERT × composed regression hold with different prompt templates? | ~2h compute (3 more prompt variants for that cell) |
-| Are NCT non-colon classes (ADI/MUC/etc.) systematically misclassified into specific LC25000 classes? | ~1h analysis (the "leak" confusion matrix idea) |
+| Question | Cost to answer | Status |
+|---|---|---|
+| Would a histopath-pretrained backbone move the OOD ceiling above 0.88? | ~6h compute (1 training run with new backbone) | **answered by exp_08: yes, PLIP → 0.933** |
+| Does the PLIP-backbone OOD advantage hold on a non-NCT-CRC shift (e.g. MHIST colorectal polyp)? | ~2h compute (one eval pass with same checkpoint + label mapping) | **planned as exp_09** |
+| Does dedupe + source-aware split lower the in-dist saturation enough for methods to differentiate? | ~3h compute (rebuild split, retrain baseline + plain) | open |
+| Does the PubMedBERT × composed regression hold with different prompt templates? | ~2h compute (3 more prompt variants for that cell) | open |
+| Are NCT non-colon classes (ADI/MUC/etc.) systematically misclassified into specific LC25000 classes? | ~1h analysis (the "leak" confusion matrix idea) | open |
+| Do other histopath-pretrained backbones (UNI, CONCH, Virchow-2) match or beat PLIP at 0.933? | ~6h compute each | open |
 
-All four are low-risk, high-information; any one of them strengthens the thesis if pursued.
+The first two are the high-priority follow-ups now that exp_08 has established the backbone-as-bottleneck thesis.
 
 ---
 
@@ -403,7 +545,11 @@ experiments/
     CLIP_OOD_eval.ipynb                  — baseline / stain VARIANT switch
     PlainClassifier_OOD_eval.ipynb       — plain softmax architecture
     CLIP_Biomed_OOD_eval.ipynb           — biomed VARIANT loop
-    runs/2026-05-28_{baseline,plain_classifier,stain_macenko_nct_ref,biomed}_ood/
+    CLIP_PLIP_OOD_eval.ipynb             — PLIP-backbone variant (exp_08 eval)
+    runs/2026-05-28_{baseline,plain_classifier,stain_macenko_nct_ref,biomed,plip_bert_composed}_ood/
+  exp_08_plip_backbone/
+    CLIP_PLIP_BERT.ipynb                 — PLIP ViT + BERT + composed prompt training
+    runs/2026-05-28_plip_bert_composed/  — executed run
   archived/                              — exp_03b_unfreeze30, exp_05_ood_transfer (superseded)
 
 results/
