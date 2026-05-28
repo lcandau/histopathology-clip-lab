@@ -1,0 +1,36 @@
+{
+  "experiment": "exp_07_ood_eval",
+  "version": "baseline_ood",
+  "checkpoint": "exp_01_baseline/baseline/weights.weights.h5",
+  "ood_dataset": "CRC-VAL-HE-7K (Kather 2019)",
+  "classes_evaluated": [
+    "NORM",
+    "TUM"
+  ],
+  "class_mapping": {
+    "NORM": "benign colon tissue (LC class 3)",
+    "TUM": "colon adenocarcinoma (LC class 4)"
+  },
+  "n_tiles": 1974,
+  "n_norm": 741,
+  "n_tum": 1233,
+  "note": "Eval uses pre-dedupe baseline (canonical split on Drive predated the dedupe).",
+  "accuracy": 0.8718,
+  "balanced_accuracy": 0.8742,
+  "macro_f1": 0.866,
+  "weighted_f1": 0.873,
+  "per_class": {
+    "benign colon tissue": {
+      "precision": 0.7968,
+      "recall": 0.8839,
+      "f1-score": 0.8381,
+      "support": 741
+    },
+    "colon adenocarcinoma": {
+      "precision": 0.9253,
+      "recall": 0.8646,
+      "f1-score": 0.8939,
+      "support": 1233
+    }
+  }
+}
