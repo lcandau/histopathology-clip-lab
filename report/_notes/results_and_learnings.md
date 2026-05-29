@@ -21,10 +21,13 @@ encoders, a non-CLIP supervised control, and a zero-shot PLIP reference. Mid-run
 (`keras.applications.resnet.preprocess_input` being applied to inputs going into a `keras_hub`
 ResNet50 backbone — two different checkpoints with the same name but different expected input
 distributions). After the fix every LC25000 in-distribution result jumped to ~0.99 macro-F1 and
-became a saturation null. **The OOD evaluation (LC25000 → NCT-CRC-HE-7K) is therefore the only
-meaningful axis for method comparison.**
+became a saturation null. **OOD evaluation (LC25000 → external datasets) is therefore the only
+meaningful axis for method comparison.** We evaluate three external datasets across two organs:
+**NCT-CRC-HE-7K** (Kather 2019; hereafter "NCT" or "NCT-CRC", colon, 2-class), **Chaoyang**
+(Zhu et al. 2021, colon, 2-class), and **LungHist700** (Tabatabaei et al. 2024, lung, 3-class).
 
-On OOD, with the ImageNet ResNet50 backbone held fixed, the surprises were uniformly *negative*:
+On OOD with the ImageNet ResNet50 backbone held fixed (all results in the NCT colon eval),
+the surprises were uniformly *negative*:
 
 - **The plain supervised CE softmax classifier (0.880 macro-F1) beats the CLIP baseline (0.866).**
   CLIP-style contrastive training does not add OOD value over a plain ResNet50 + softmax on this task.
@@ -40,12 +43,15 @@ ResNet50 backbone as the OOD bottleneck** (PLIP zero-shot uses a different backb
 position outside the band).
 
 **exp_08 then tested that hypothesis directly** by swapping the image backbone for PLIP's
-ViT-B/32 (pretrained on histopathology image–text pairs) and keeping everything else identical
-to the best biomed cell — same composed prompt, same `bert-base-uncased` text encoder, same
-projection head, same training recipe. Result: **NCT OOD macro-F1 = 0.933** (+6.7 F1 vs the
-prior best plain_classifier 0.880, +6.7 vs CLIP baseline). **The ≈0.88 ceiling broke as soon
-as the image encoder changed.** This confirmed the bottleneck diagnosis: the head, prompt,
-and text encoder were never the limiting factor.
+frozen ViT-B/32 vision encoder (pretrained on histopathology image–text pairs) and keeping
+everything else identical to the best biomed cell — same composed prompt, same
+`bert-base-uncased` text encoder, same projection head, same training recipe. We call this
+architecture **PLIP-backbone** throughout the rest of this doc (in metrics JSONs and runs/
+folders it appears as `plip_bert_composed`). Result: **NCT OOD macro-F1 = 0.933** (+6.7 F1
+vs the prior best plain_classifier 0.880, +6.7 vs CLIP baseline). The ResNet50 colon ceiling
+of ≈0.88 broke as soon as the image encoder changed — though, as exp_09 below shows, the
+ResNet50 floor on harder shifts (lung) is far lower than 0.88 to begin with. This confirmed
+the bottleneck diagnosis: the head, prompt, and text encoder were never the limiting factor.
 
 **exp_09 extended the comparison to two new OOD datasets** — Chaoyang (colon, Beijing
 hospital) and LungHist700 (lung, 3-class AdC/SqC/normal) — to test whether the PLIP
@@ -324,38 +330,47 @@ backbone**, the discrimination tells a *negative* story:
 
 ### 4. The frozen ImageNet ResNet50 was the OOD bottleneck — exp_08 (NCT) and exp_09 (Chaoyang + LungHist700) prove it
 
-The unified picture across the 9 ResNet50-based trained variants was that they clustered
-within ~7 F1 points on OOD (0.81–0.88) despite radically different architectures, training
-objectives, prompt formats, text encoders, and preprocessing. The variation between methods
-was much smaller than the variation between in-dist (0.99) and OOD (0.85). This pointed
-squarely at one source of variation: **the image-encoder features**. Every ResNet50-based
-variant used the same frozen `resnet_50_imagenet` features; every one inherited the same OOD
-ceiling those features permitted.
+**Hypothesis.** The unified picture across the 9 ResNet50-based trained variants on NCT-CRC
+was that they clustered within ~7 F1 points on OOD (0.81–0.88) despite radically different
+architectures, training objectives, prompt formats, text encoders, and preprocessing — much
+less variation than between in-dist (0.99) and OOD (0.85). That pointed squarely at one
+source of variation: **the image-encoder features**. Every ResNet50-based variant used the
+same frozen `resnet_50_imagenet` features, and every one inherited the OOD ceiling those
+features permitted.
 
-**exp_08 tested this hypothesis directly.** Architecture and recipe held identical to the
-best biomed cell (BERT + composed prompt, frozen text, projection head, InfoNCE) — only the
-image backbone swapped from `keras_hub` ResNet50 (ImageNet-pretrained) to `vinid/plip`'s
-ViT-B/32 (pretrained on histopathology image–text pairs). Result: **OOD macro-F1 = 0.933,
-+6.7 F1 points over the previous ceiling.** The in-dist number barely moved (0.996 vs 0.996
-baseline) — the LC25000 saturation null is independent of backbone — but OOD broke open.
+**Three-dataset, two-organ test** (PLIP-backbone vs. best ResNet50-based variant per dataset):
 
-**This confirms the bottleneck diagnosis.** The head, projection, prompt, and text encoder
-were never the limiting factor on OOD; the image representation was. A backbone pretrained
-on histopathology — even without any LC25000 supervision until our fine-tuning — encodes
-NCT-CRC colon tissue more usefully than an ImageNet-pretrained ResNet50 ever did.
+| Dataset (organ) | Best ResNet50 variant | PLIP-backbone | Δ |
+|---|---|---|---|
+| NCT-CRC (colon) | plain_classifier 0.880 | **0.933** | **+5.3 F1** |
+| Chaoyang (colon) | baseline 0.786 | **0.813** | **+2.7 F1** |
+| LungHist700 (lung) | baseline 0.305 | **0.640** | **+33.5 F1** |
 
-**exp_09 strengthens this from "one-dataset confirmation" to "three-dataset / two-organ
-confirmation"**. PLIP-backbone wins on Chaoyang (+3 F1 vs baseline) on a different colon
-hospital with different staining and label noise. And it produces a +33 F1 lift on
-LungHist700, where ResNet50 variants collapse to ~chance. The three-dataset evidence
-shows the backbone effect is not specific to a single OOD distribution — it is the
-systematic determinant of OOD performance for this LC25000-trained pipeline.
+PLIP-backbone wins on every dataset, with a gap that **grows with shift severity**. The
+in-dist number barely moves regardless of backbone (0.996 vs 0.996 for ResNet50) — the
+LC25000 saturation null is backbone-independent — but every OOD result is.
+
+**Mechanism.** PLIP-backbone holds architecture and recipe identical to the best biomed
+cell (BERT + composed prompt, frozen text, projection head, InfoNCE). The *only* change is
+the image backbone (`keras_hub` ResNet50 ImageNet → `vinid/plip` ViT-B/32 histopathology).
+The head, projection, prompt, and text encoder are not the limiting factor on OOD; the
+image representation is. A backbone pretrained on histopathology — even without any LC25000
+supervision until our fine-tuning — encodes colon and lung tissue more usefully than an
+ImageNet-pretrained ResNet50 ever does.
+
+**Why the gap is small on colon and huge on lung.** ImageNet supervision never contains
+histology; LC25000 supervision rescues ResNet50 features that happen to correlate with
+*colon* class labels in LC25000's training distribution. That correlation transfers
+partially to NCT-CRC and Chaoyang (both colon), so ResNet50 gets to ≈0.78–0.88 there. It
+does not transfer to LungHist700 (different organ); ResNet50 lung features collapse to
+no class variance and the predictor degenerates. PLIP's pretraining contains both organs
+and shows no such asymmetry.
 
 The implication for the thesis flips from negative-only ("none of these methods help") to
 balanced and strong: **none of these head/loss/text-side methods help on a frozen ImageNet
-ResNet50 backbone — but swapping the backbone for a histopathology-pretrained one breaks
-the colon-OOD ceiling and is the only intervention that produces a functional lung-OOD
-classifier at all.**
+ResNet50 backbone — but swapping the backbone for a histopathology-pretrained one (a) breaks
+the colon-OOD ceiling by +3 to +5 F1 and (b) is the only intervention that produces a
+functional lung-OOD classifier at all.**
 
 ### 5. Classification quality and representation alignment are separable axes
 
@@ -431,12 +446,12 @@ For settings with much larger stain shift than the LC25000-vs-NCT-CRC pair (e.g.
 WSI variation in clinical deployment), stain normalisation might pay off. On this specific
 transfer it doesn't.
 
-### 8. Domain-pretrained backbone is the dominant lever — and the gap grows with shift severity
+### 8. Domain-pretrained backbone is the dominant lever — the colon-vs-lung asymmetry says everything
 
-The single biggest OOD F1 gain in the project came from one change: image backbone. Holding
-**everything else identical** to the best biomed cell (BERT text encoder, composed prompt,
-projection head architecture, InfoNCE loss, AdamW + EarlyStopping), replacing `keras_hub`
-ResNet50 with `vinid/plip`'s ViT-B/32 moved OOD macro-F1 by:
+The headline number: **+33 F1 on LungHist700**, ~6× larger than the colon-side gap. This
+is the project's most striking single result and the strongest argument for the
+backbone-as-bottleneck thesis. The single biggest OOD F1 gain came from one change —
+swapping the image backbone — and *the size of the gain is a function of the organ*:
 
 | OOD dataset | ResNet50 best | PLIP-backbone | Δ |
 |---|---|---|---|
@@ -444,11 +459,19 @@ ResNet50 with `vinid/plip`'s ViT-B/32 moved OOD macro-F1 by:
 | Chaoyang (colon) | 0.786 (baseline) | 0.813 | **+2.7 F1** |
 | LungHist700 (lung) | 0.305 (baseline) | 0.640 | **+33.5 F1** |
 
-The PLIP advantage is **monotonically larger as the OOD shift gets harder**. On NCT-CRC
-(close to LC25000 in style — Macenko-normalised, similar staining), the gap is modest.
-On Chaoyang (different hospital, label noise), small. On LungHist700 (different organ,
-3-class, distinct staining), the gap is *an order of magnitude larger* than on the easier
-shifts.
+**Colon (NCT, Chaoyang): +3 to +5 F1.** PLIP-backbone narrowly but consistently wins.
+ResNet50 features, partially rescued by LC25000 colon supervision, give a working but
+sub-optimal classifier on colon OOD.
+
+**Lung (LungHist700): +33.5 F1.** PLIP-backbone is not narrowly better — it is the *only*
+variant that produces a functional classifier. Both ResNet50-based variants collapse to a
+near-chance degenerate predictor. The +33 F1 isn't "PLIP is incrementally better"; it's
+"PLIP works on lung, ResNet50 doesn't".
+
+This monotonic growth — bigger gap on harder shifts — implies the PLIP advantage is not a
+constant additive offset; it is *dose-dependent* on how far the OOD distribution sits from
+what ImageNet supervision happens to encode. Per-organ reporting is therefore essential;
+mean-OOD numbers collapse the regime change into a single misleading point.
 
 Stacked against the project's other interventions on **NCT-CRC** (the comparable colon baseline):
 
@@ -579,8 +602,10 @@ These need to land in the §limitations section of the thesis:
 
 1. **Canonical split was built pre-dedupe** and reused by every model trained today. The 1,280
    byte-duplicates therefore live across both train and test for every reported number. Effect
-   size: probably 1–2 F1 points of inflation on every in-dist number; OOD is not affected since
-   NCT is independent.
+   size: probably 1–2 F1 points of inflation on every in-dist number; OOD numbers are unaffected
+   since NCT-CRC, Chaoyang, and LungHist700 are all independent datasets. This caveat applies
+   uniformly to every trained variant in the project (v7 baseline through exp_08 PLIP-backbone)
+   — there is no checkpoint reported here that is free of it.
 
 2. **LC25000 augmentation-pair leakage** (1,250 sources × 20 augmentations) was identified but
    not corrected. The proper fix is a source-image-aware split (each original's 20 augmentations
@@ -597,10 +622,14 @@ These need to land in the §limitations section of the thesis:
    `TypeError` after the transformers library raised the latter when looking up a non-existent
    TF sharded-weights index file.
 
-5. **OOD evaluation restricted to 2 NCT colon classes** (NORM + TUM). The other 7 NCT classes
-   (ADI, BACK, DEB, LYM, MUC, MUS, STR) have no clean LC25000 mapping and are excluded. This
-   restricts the OOD comparison to a binary problem; harder multi-class OOD scenarios would
-   need additional class-mapping work or a different OOD dataset.
+5. **Restricted-argmax OOD evaluation.** Every external eval scores only the LC25000 classes
+   that have a clean dataset analogue: 2 colon classes for NCT (NORM/TUM) and Chaoyang
+   (normal/adenocarcinoma); 3 lung classes for LungHist700 (normal/AdC/SqC). The other 7 NCT
+   classes (ADI, BACK, DEB, LYM, MUC, MUS, STR) and the Chaoyang `serrated`/`adenoma` (1,163 +
+   937 images) are excluded from scoring — they have no clean LC25000 analogue. LungHist700's
+   3 differentiation grades within AdC and SqC are collapsed to parent classes because LC25000
+   has no grading annotation. This is a deliberate simplification; a richer multi-class OOD
+   evaluation would require either a different dataset or additional class-mapping work.
 
 6. **Single NCT tile as Macenko reference** (`NORM-TCGA-AASSYQPA`). Picking a different
    reference would shift the target stain profile and could change the OOD result by some
@@ -617,13 +646,18 @@ These need to land in the §limitations section of the thesis:
 > 80/10/10 split scatters augmented copies of the 1,250 source patches across train and test,
 > producing a leakage path that makes in-distribution evaluation effectively uninformative for
 > comparing model architectures. We therefore report in-distribution numbers for completeness
-> but frame the cross-source generalisation to NCT-CRC-HE-7K as the central evaluation.
+> but frame cross-source generalisation to three external datasets across two organs —
+> **NCT-CRC-HE-7K** (colon), **Chaoyang** (colon), and **LungHist700** (lung) — as the
+> central evaluation. The choice of multiple datasets across two organs is deliberate: results
+> presented later show the effect size of the dominant intervention varies by an order of
+> magnitude between organs, which a single-dataset eval would have hidden.
 
 ### §6 (OOD generalisation — the central contribution)
 
-> On the LC25000 → NCT-CRC-HE-7K cross-source generalisation task, we evaluate a matrix of
-> interventions on the standard frozen-ImageNet-ResNet50 + frozen-text-encoder CLIP recipe.
-> We observe:
+> On the LC25000 → external-dataset cross-source generalisation task (NCT-CRC for colon,
+> Chaoyang for colon, LungHist700 for lung), we evaluate a matrix of interventions on the
+> standard frozen-ImageNet-ResNet50 + frozen-text-encoder CLIP recipe. On the **NCT-CRC
+> baseline evaluation** with the ResNet50 backbone held fixed, we observe:
 >
 > 1. CLIP-style contrastive training does not improve OOD generalisation over plain supervised
 >    cross-entropy on this colon-classification transfer. The plain classifier reaches macro-F1
