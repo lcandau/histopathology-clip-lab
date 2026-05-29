@@ -1,0 +1,42 @@
+{
+  "experiment": "exp_07_ood_eval",
+  "variant": "baseline",
+  "checkpoint": "exp_01_baseline/baseline/weights.weights.h5",
+  "ood_dataset": "Chaoyang (Zhu et al., 2021) - colorectal histopathology",
+  "classes_evaluated": [
+    "normal",
+    "adenocarcinoma"
+  ],
+  "class_mapping": {
+    "normal": "benign colon tissue (LC class 3)",
+    "adenocarcinoma": "colon adenocarcinoma (LC class 4)"
+  },
+  "classes_excluded": {
+    "serrated": "no clean LC25000 analogue (precancerous polyp)",
+    "adenoma": "no clean LC25000 analogue (precancerous polyp)"
+  },
+  "n_tiles_total": 6160,
+  "n_tiles_scored": 4060,
+  "n_normal": 1816,
+  "n_adenocarcinoma": 2244,
+  "n_excluded_serrated": 1163,
+  "n_excluded_adenoma": 937,
+  "accuracy": 0.7963,
+  "balanced_accuracy": 0.7821,
+  "macro_f1": 0.7862,
+  "weighted_f1": 0.7911,
+  "per_class": {
+    "benign colon tissue": {
+      "precision": 0.8628,
+      "recall": 0.6476,
+      "f1-score": 0.7399,
+      "support": 1816
+    },
+    "colon adenocarcinoma": {
+      "precision": 0.7627,
+      "recall": 0.9167,
+      "f1-score": 0.8326,
+      "support": 2244
+    }
+  }
+}
