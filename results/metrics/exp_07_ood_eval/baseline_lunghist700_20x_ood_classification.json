@@ -1,0 +1,45 @@
+{
+  "experiment": "exp_07_ood_eval",
+  "variant": "baseline",
+  "checkpoint": "exp_01_baseline/baseline/weights.weights.h5",
+  "ood_dataset": "LungHist700 (Tabatabaei et al., 2024) - pulmonary histopathology, 20x subset",
+  "classes_evaluated": [
+    "benign lung tissue",
+    "lung adenocarcinoma",
+    "lung squamous cell carcinoma"
+  ],
+  "class_mapping": {
+    "nor (any)": "benign lung tissue (LC class 0)",
+    "aca (any grade)": "lung adenocarcinoma (LC class 1)",
+    "scc (any grade)": "lung squamous cell carcinoma (LC class 2)"
+  },
+  "magnification_filter": "20x (40x excluded; ~691 total -> 359 at 20x)",
+  "n_tiles": 359,
+  "n_normal": 85,
+  "n_adenocarcinoma": 146,
+  "n_squamous": 128,
+  "accuracy": 0.39,
+  "balanced_accuracy": 0.3825,
+  "macro_f1": 0.3047,
+  "weighted_f1": 0.3005,
+  "per_class": {
+    "benign lung tissue": {
+      "precision": 0.4324,
+      "recall": 0.1882,
+      "f1-score": 0.2623,
+      "support": 85
+    },
+    "lung adenocarcinoma": {
+      "precision": 0.4545,
+      "recall": 0.0685,
+      "f1-score": 0.119,
+      "support": 146
+    },
+    "lung squamous cell carcinoma": {
+      "precision": 0.38,
+      "recall": 0.8906,
+      "f1-score": 0.5327,
+      "support": 128
+    }
+  }
+}
