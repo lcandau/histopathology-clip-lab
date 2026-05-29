@@ -87,3 +87,20 @@ HuggingFace ecosystem, so the entire RQ6 text side is unified on
 therefore re-anchor the BERT-base number under the HF pipeline. Any small
 drift from the historical 0.6273 macro-F1 baseline is expected and is the
 cost of having a clean encoder ablation.
+
+## OOD evaluation
+
+`CLIP_Biomed_OOD_eval.ipynb` (co-located in this folder) runs the 6-cell grid
+against NCT-CRC-HE-7K under restricted argmax to the 2 colon classes (NORM ↔
+benign colon, TUM ↔ colon adeno). The eval is structurally different from the
+`experiments/exp_07_ood_eval/*_OOD_eval.ipynb` notebooks (which compare model
+architectures on a single dataset); this one compares 6 within-architecture
+text-encoder × prompt cells on a single dataset and is therefore specific to
+exp_06. It lives here rather than in `exp_07_ood_eval/` to keep the
+exp_06 experiment self-contained.
+
+Headline finding (2026-05-28 run, archived in `runs/2026-05-28_biomed_ood/`):
+none of the 6 cells beats the baseline CLIP (0.866 macro-F1) on NCT OOD; all
+cells land in 0.81–0.86. Vanilla BERT prefers the `composed` prompt format;
+biomedical encoders prefer bare class names — a small prompt-design
+observation but not enough to flip any cell to winning.
