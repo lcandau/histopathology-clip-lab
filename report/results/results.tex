@@ -13,7 +13,7 @@
 %   3. Stain normalization        (moved here -- input-side axis)
 %   4. PLIP zero-shot reference
 %   5. Foundational model vs plain classifier
-%   6. Text encoder ablation
+%   6. Text encoder pretraining
 %   7. Image encoder pretraining (HEADLINE)
 %   8. Discussion
 %
@@ -25,9 +25,6 @@
 \providecommand{\stale}[1]{{\color{orange}#1\textsuperscript{\dag}}}
 \providecommand{\todo}[1]{\textcolor{orange}{\textit{[TODO: #1]}}}
 \providecommand{\pending}[1]{\textcolor{blue}{\textit{[pending: #1]}}}
-
-\noindent\textcolor{orange}{\textbf{[Pass D note]} This chapter is in bullet form for tutor first-pass review. Some numbers are flagged stale (\stale{value}, pre-preprocessing-bug-fix, pending update) or pending (\pending{...}, waiting on the DINOv2 and PLIP-zero-shot-extension Colab runs). Prose pass follows after tutor structural feedback. Methodology chapter expansion is the immediately-next pass.}
-
 
 % ============================================================
 \section{Experimental Overview}
@@ -55,7 +52,8 @@
 \centering
 \small
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
-\begin{tabular}{|L{2.4cm}|L{2.6cm}|L{2.6cm}|L{1.8cm}|L{2.2cm}|L{2.0cm}|}
+\footnotesize
+\begin{tabular}{|L{2.0cm}|L{2.4cm}|L{2.2cm}|L{1.5cm}|L{1.9cm}|L{1.9cm}|}
 \hline
 \textbf{Experiment} & \textbf{Image encoder} & \textbf{Text encoder} & \textbf{Loss} & \textbf{Preprocessing} & \textbf{Axis tested} \\ \hline
 Baseline (\S\ref{sec:results-baseline}) & ResNet50 (ImageNet) & BERT base & InfoNCE & RGB / 255 & reference \\ \hline
@@ -208,22 +206,27 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 
 \begin{figure}[ht]
     \centering
-    \begin{minipage}[t]{0.32\textwidth}
+    \begin{minipage}[t]{0.23\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{../results/plots/stain_macenko_before_after.png}
-        \par\vspace{2pt}\footnotesize (a) Macenko.
+        \includegraphics[width=\textwidth]{../results/plots/stain_raw_examples.png}
+        \par\vspace{2pt}\footnotesize (a) Raw.
     \end{minipage}\hfill
-    \begin{minipage}[t]{0.32\textwidth}
+    \begin{minipage}[t]{0.23\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{../results/plots/stain_reinhard_before_after.png}
-        \par\vspace{2pt}\footnotesize (b) Reinhard.
+        \includegraphics[width=\textwidth]{../results/plots/stain_macenko_normalized_only.png}
+        \par\vspace{2pt}\footnotesize (b) Macenko.
     \end{minipage}\hfill
-    \begin{minipage}[t]{0.32\textwidth}
+    \begin{minipage}[t]{0.23\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{../results/plots/stain_vahadane_before_after.png}
-        \par\vspace{2pt}\footnotesize (c) Vahadane.
+        \includegraphics[width=\textwidth]{../results/plots/stain_reinhard_normalized_only.png}
+        \par\vspace{2pt}\footnotesize (c) Reinhard.
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.23\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../results/plots/stain_vahadane_normalized_only.png}
+        \par\vspace{2pt}\footnotesize (d) Vahadane.
     \end{minipage}
-    \caption{Before/after stain normalization, one example per class per method. Note the bottom-right Vahadane panel (colon\_aca) shows a failed re-render --- the NMF solver does not always converge cleanly, an observation discussed in the interpretation.}
+    \caption{Stain normalization, one example per class. Column (a) shows the raw inputs (identical across methods, shown once for compactness); columns (b)--(d) show the same inputs after Macenko, Reinhard, and Vahadane normalization respectively. The bottom-row colon\_aca cell in column (d) shows the Vahadane NMF solver failing to converge and re-rendering near-blank, an instability discussed in the interpretation.}
     \label{fig:stain-before-after}
 \end{figure}
 
@@ -357,7 +360,7 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 
 
 % ============================================================
-\section{Text encoder ablation}
+\section{Text encoder pretraining}
 \label{sec:results-text-encoder}
 
 \subsection{Configuration}
@@ -433,7 +436,7 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 \subsection{Training source results}
 \begin{itemize}
     \item PLIP image encoder + LC25000 supervision: LC25000 macro-F1 $= 0.996$. Same saturation null as every other trained variant.
-    \item DINOv2 image encoder + LC25000 supervision: \pending{Colab run is finishing --- results will land before the next chapter pass.} The interesting framing for this number: DINOv2 has never seen labelled histology (its pretraining is self-supervised on general natural images). If the projection head + cosine classifier still saturates LC25000 in-distribution, the in-distribution null is confirmed as backbone-independent --- the bottleneck is not what the image encoder ``knows about histology'' in the supervised sense.
+    \item DINOv2 image encoder + LC25000 supervision: LC25000 macro-F1 $= 0.989$. The saturation null holds even though DINOv2 has never seen labelled histology --- its pretraining is self-supervised on general natural images, with no class labels. Confirms that the in-distribution null is backbone-independent: the bottleneck on the meaningful axis is not what the image encoder ``knows about histology'' in the supervised sense; it is what kind of variation the encoder learned to be sensitive to.
 \end{itemize}
 
 \subsection{Generalization to external datasets}
@@ -444,20 +447,20 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
     \hline
     \textbf{Image encoder} & \textbf{LC25000} & \textbf{NCT} & \textbf{Chaoyang} & \textbf{LungHist700} \\ \hline
     ResNet50 (ImageNet)                              & 0.996 & 0.866 & 0.786 & 0.305 \\ \hline
+    ViT-B/14 (DINOv2 / self-supervised)              & 0.989 & 0.855 & 0.776 & 0.457 \\ \hline
     \textbf{ViT-B/32 (PLIP / OpenPath)}              & \textbf{0.996} & \textbf{0.933} & \textbf{0.813} & \textbf{0.640} \\ \hline
-    ViT-B/14 (DINOv2 / self-supervised)              & \pending{TBD} & \pending{TBD} & \pending{TBD} & \pending{TBD} \\ \hline
     \end{tabular}
     \caption{Image encoder pretraining swap, macro-F1 across the training-source split and three external datasets. Everything except the image encoder is identical across rows.}
     \label{tab:image-encoder}
 \end{table}
 
 \begin{itemize}
-    \item \textbf{NCT-CRC (close-shift colon)}: PLIP wins by $+0.067$ F1 over the ResNet50 baseline. The ResNet50 colon ceiling around $0.88$ that none of the other interventions could clear is broken simply by changing the image encoder's pretraining domain.
-    \item \textbf{Chaoyang (different-hospital colon)}: PLIP wins by $+0.027$ F1. Modest but consistent with the colon-side narrative.
-    \item \textbf{LungHist700 (different-organ lung)}: PLIP wins by $+0.335$ F1. An order of magnitude larger than the colon-side gap.
+    \item \textbf{NCT-CRC (close-shift colon)}: PLIP wins by $+0.067$ F1 over the ResNet50 baseline. DINOv2 lands at $-0.011$ vs baseline --- general-domain self-supervision does \emph{not} help on the easiest external dataset. The colon ceiling around $0.88$ that none of the other interventions could clear is broken specifically by changing the image encoder's pretraining \emph{domain}, not by architecture or self-supervision alone.
+    \item \textbf{Chaoyang (different-hospital colon)}: PLIP wins by $+0.027$ F1; DINOv2 lands at $-0.010$ vs baseline. Same colon-side pattern as NCT: only histopathology pretraining helps; general SSL is interchangeable with ImageNet supervision.
+    \item \textbf{LungHist700 (different-organ lung)}: this is where the control pays off. PLIP wins by $+0.335$ F1 over baseline; DINOv2 wins by $+0.152$ F1. \emph{Roughly half of PLIP's lung advantage comes from architecture + self-supervised pretraining on general images; the other half comes from histopathology pretraining specifically.} DINOv2 partially rescues the lung collapse (per-class recall $0.46/0.52/0.40$, balanced) but does not match PLIP's full functional classifier ($0.51/0.49/0.91$).
 \end{itemize}
 
-\noindent\textbf{Per-class signature on LungHist700.} Both ResNet50 variants (baseline and plain CE) converge to the same degenerate predictor on lung tissue: baseline recall $0.19/0.07/0.89$ for normal/AdC/SqC, plain CE $0.15/0.05/0.91$. Both predict ``squamous'' on $\sim 90$\% of inputs regardless of true class. PLIP-encoded variant: $0.51/0.49/0.91$ --- a 10$\times$ improvement on adenocarcinoma recall while preserving squamous recall.
+\noindent\textbf{Per-class signature on LungHist700.} Both ResNet50 variants converge to the same degenerate predictor on lung tissue: baseline recall $0.19/0.07/0.89$ for normal/AdC/SqC, plain CE $0.15/0.05/0.91$ --- both predict ``squamous'' on $\sim 90$\% of inputs regardless of true class. \textbf{DINOv2-encoded variant: $0.46/0.52/0.40$} --- balanced across all 3 classes, no degenerate collapse, but lower peak per-class scores than PLIP. \textbf{PLIP-encoded variant: $0.51/0.49/0.91$} --- balanced \emph{and} retains the high squamous recall, the only variant that does both.
 
 \begin{figure}[ht]
     \centering
@@ -477,11 +480,13 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 
 \subsection{What we learned}
 \begin{itemize}
-    \item The \textbf{image encoder's pretraining domain is the dominant lever in this study}.
-    \item Effect size: $+0.067$ F1 on close-shift colon, $+0.027$ on different-hospital colon, \textbf{$+0.335$ on different-organ lung}. The gap grows with shift severity --- the lever is dose-dependent.
-    \item Critically: this is the \emph{only} intervention we tested that produces a \emph{functional} lung classifier on LungHist700. Head-side, loss-side, and text-side methods on a frozen ResNet50 cannot rescue a feature extractor that produces no usable lung-tissue variance.
-    \item Why colon transfers but lung does not, on the ResNet50 baseline: ImageNet supervision contains no histology. LC25000 supervision rescues ResNet50 features that happen to correlate with colon class labels in the LC25000 training distribution. That correlation transfers partially to NCT/Chaoyang (both colon, stylistically close). It does not transfer to lung tissue at all --- the lung-side ``success'' in-distribution is memorisation on the LC25000 lung subset, not learned lung tissue features. PLIP's pretraining domain contains both organs and shows no such asymmetry.
-    \item DINOv2 result (pending) will sharpen this: if DINOv2 also breaks the lung collapse despite no histopathology in its pretraining, the win is partly about architecture and self-supervision; if it does not, the win is specifically about pretraining \emph{on histopathology data}.
+    \item The \textbf{image encoder's pretraining is the dominant lever in this study}, but the DINOv2 control reveals that ``pretraining'' decomposes into two contributing components.
+    \item Effect-size summary: PLIP gains over baseline by $+0.067$ F1 on close-shift colon, $+0.027$ on different-hospital colon, \textbf{$+0.335$ on different-organ lung}. DINOv2 gains over baseline by $-0.011$ / $-0.010$ / $+0.152$ on the same three datasets.
+    \item \textbf{On colon (NCT, Chaoyang)}: only histopathology pretraining moves the needle. General-domain self-supervised pretraining (DINOv2) lands within noise of ResNet50 supervised pretraining on natural images. The colon advantage is specifically about \emph{what} the encoder was pretrained on, not \emph{how}.
+    \item \textbf{On lung (LungHist700)}: both architecture/self-supervision and histopathology pretraining contribute, roughly equally. DINOv2 partially rescues the lung collapse ($+0.152$ F1, from a degenerate predictor to a balanced 3-class classifier with per-class recalls $0.46/0.52/0.40$); PLIP rescues it further ($+0.183$ F1 over DINOv2, to $0.51/0.49/0.91$). \emph{Together these decompose PLIP's lung advantage into two roughly equal halves}: ``architecture + self-supervised pretraining on diverse natural images'' and ``histopathology-specific pretraining''.
+    \item Why colon and lung behave differently, on the ResNet50 baseline: ImageNet supervision contains no histology. LC25000 supervision rescues ResNet50 features that happen to correlate with colon class labels in the LC25000 training distribution. That correlation transfers partially to NCT/Chaoyang (both colon, stylistically close). It does not transfer to lung tissue at all --- the lung-side ``success'' in-distribution is memorisation on the LC25000 lung subset, not learned lung tissue features.
+    \item Why DINOv2 helps on lung but not colon: DINOv2's self-supervised pretraining on $\sim 142$M diverse natural images produces image features that are sensitive to a much broader range of local-texture variation than supervised ImageNet pretraining. That broader feature space provides \emph{enough} signal for LC25000 supervision + the projection head to construct a usable lung classifier, even though the encoder has never seen histology. On colon, where ResNet50 features were already enough for partial transfer, DINOv2's broader features do not help further --- the bottleneck on colon is the pretraining domain, not the architecture's feature breadth.
+    \item Patch-size confound check: DINOv2 has more spatial detail than PLIP ($256$ vs $49$ patch tokens at the same 224$\times$224 input), but still loses on colon. The patch-size difference is therefore not the dominant factor here --- pretraining is.
 \end{itemize}
 
 
@@ -493,32 +498,16 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 \begin{itemize}
     \item This chapter evaluated six interventions on a frozen general-purpose CLIP pipeline (ResNet50 + BERT). Five of the six (stain normalization, biomedical text encoders, plain-classifier substitution, and the prompt-format variations within the text-encoder ablation) produce changes within $\sim 5$ F1 of the baseline on the close-shift external dataset (NCT) and \emph{no} measurable improvement when the model is evaluated on data it has never seen.
     \item The sixth intervention --- replacing the image encoder's pretraining (Section~\ref{sec:results-image-encoder}) --- moves the headline metric by $+0.067$ on close-shift colon (NCT), $+0.027$ on different-hospital colon (Chaoyang), and \textbf{$+0.335$ on different-organ lung (LungHist700)}, taking the lung result from a degenerate single-class predictor at $0.305$ to a functional 3-class classifier at $0.640$.
-    \item \textbf{Backbone choice dominates everything else} by roughly $5\times$ over the next-largest single lever on colon external evaluation, and by $\sim 25$--$100\times$ on lung external evaluation where the head/loss/text-side methods cannot rescue a non-functional predictor at all.
-    \item The contemporary methods literature's emphasis on novel loss functions, text-side innovations, and stain harmonisation is not supported by this study at the frozen-backbone scale we evaluated. The image encoder's pretraining is the lever.
+    \item The DINOv2 control (same architecture as PLIP, self-supervised on general natural images, no histopathology data) decomposes that gain. On colon, DINOv2 ties baseline within noise --- general-domain self-supervision does not help when histopathology pretraining does. On lung, DINOv2 gains $+0.152$ F1 over baseline (about half of PLIP's $+0.335$). So PLIP's lung advantage divides roughly evenly between ``ViT architecture + self-supervision on diverse natural images'' and ``histopathology-specific pretraining''.
+    \item \textbf{The image encoder's pretraining is the dominant lever}, by roughly $5\times$ over the next-largest single lever on colon external evaluation. On lung, no head/loss/text-side intervention rescues a non-functional predictor at all; only changing the encoder does.
+    \item The contemporary methods literature's emphasis on novel loss functions, text-side innovations, and stain harmonisation is not supported by this study at the frozen-backbone scale we evaluated.
 \end{itemize}
 
-\subsection{The cross-organ asymmetry is informative}
+\subsection{Secondary observations}
 \begin{itemize}
-    \item ResNet50-based variants partially work on colon external data ($0.78$--$0.88$ macro-F1) but \emph{categorically fail} on lung external data ($\sim 0.30$, near 3-class chance). This is a \emph{regime change}, not a smooth degradation.
-    \item Mechanism: LC25000 supervision can rescue features that happen to correlate with colon class labels in LC25000 specifically, but cannot produce useful lung-tissue discrimination within a frozen ResNet50 trained on general natural images. The in-distribution ``success'' on LC25000 lung is largely memorisation, not learned lung tissue features.
-    \item \textbf{Methodological consequence}: per-organ generalization reporting is essential. Aggregating across datasets (a single ``mean external macro-F1'') would have collapsed the regime change into a single misleading point. Per-dataset numbers --- the standard format throughout this chapter --- preserve the signal.
-\end{itemize}
-
-\subsection{Classification quality and representation alignment are separable axes}
-\begin{itemize}
-    \item Baseline CLIP achieves cross-dataset \emph{cluster alignment} (NCT triangles sit inside the matching LC25000 colon cluster in feature space) but lower classification F1.
-    \item PLIP-pretrained ViT achieves the \emph{highest classification F1} across all three external datasets, but leaves external samples in their own region of feature space (Figure~\ref{fig:image-encoder-umap-lung}b).
-    \item Mechanism: the contrastive objective optimises alignment of same-class pairs; the cosine-classifier rule only needs alignment to the class-prompt direction. These are different geometric properties.
-    \item For \emph{downstream uses} where the feature representation matters --- clustering, retrieval, transfer to other classifiers --- baseline CLIP's representation is meaningfully better than its classification F1 suggests. The right choice depends on what the downstream task is.
-\end{itemize}
-
-\subsection{The plain-classifier flip}
-\begin{itemize}
-    \item Plain CE \emph{ties} CLIP on the training-source test split (both at $\sim 0.99$, saturation).
-    \item Plain CE \emph{marginally wins} on close-shift external (NCT, $-0.014$ F1 difference).
-    \item Plain CE \emph{loses} on different-hospital external (Chaoyang, $+0.064$ for CLIP) and \emph{loses} on different-organ external (LungHist700, $+0.024$ for CLIP).
-    \item High-confidence softmax classifiers trained on a single distribution are more brittle under shift than CLIP's cosine-similarity classifiers. As shift severity grows they degenerate into a single-class predictor (visible in the Chaoyang per-class signature in Section~\ref{sec:results-foundational-vs-plain}).
-    \item This is the supporting evidence for RQ2's foundational-model framing: CLIP earns its complexity not at peak in-distribution accuracy, but in shift robustness and open-vocabulary capabilities.
+    \item \textbf{Cross-organ regime change.} ResNet50 variants partially work on colon external data ($0.78$--$0.88$) but \emph{categorically fail} on lung ($\sim 0.30$, near 3-class chance). Mechanism: LC25000 supervision can rescue ResNet50 features that happen to correlate with colon class labels in LC25000, but cannot produce useful lung-tissue features within a frozen ImageNet ResNet50; the in-distribution lung ``success'' is memorisation. Per-organ external evaluation is therefore essential; aggregating across datasets hides the regime change.
+    \item \textbf{Classification quality $\neq$ representation alignment.} Baseline CLIP achieves cross-dataset \emph{cluster alignment} but lower classification F1; PLIP achieves the highest F1 but leaves external samples in their own region of feature space. The contrastive objective optimises same-class-pair alignment; the cosine-classifier rule only needs alignment to the class-prompt direction. These are different geometric properties --- the right tradeoff depends on whether the downstream task is classification or representation-driven (retrieval, clustering, transfer).
+    \item \textbf{Plain-classifier flip under shift.} Plain CE ties CLIP in-distribution and marginally wins NCT, but loses Chaoyang ($+0.064$ for CLIP) and LungHist700 ($+0.024$). High-confidence softmax classifiers degenerate into single-class predictors as shift severity grows (visible in the Chaoyang per-class signature); CLIP's cosine geometry doesn't. This supports the foundational-model framing of RQ2: CLIP earns its complexity in shift robustness, not in-distribution accuracy.
 \end{itemize}
 
 \subsection{Headline summary}
@@ -529,13 +518,13 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
     \hline
     \textbf{Variant} & \textbf{LC25000} & \textbf{NCT} & \textbf{Chaoyang} & \textbf{LungHist700} \\ \hline
     \textbf{ViT-B/32 (PLIP)}                  & \textbf{0.996} & \textbf{0.933} & \textbf{0.813} & \textbf{0.640} \\ \hline
+    ViT-B/14 (DINOv2)                          & 0.989 & 0.855 & 0.776 & 0.457 \\ \hline
     Baseline (ResNet50 + BERT)                & 0.996 & 0.866 & 0.786 & 0.305 \\ \hline
     Plain CE classifier                        & 0.995 & 0.880 & 0.722 & 0.281 \\ \hline
     Stain Macenko (NCT-NORM reference)        & 0.986 & 0.844 & ---   & ---   \\ \hline
     Best text-encoder cell (BERT + composed)  & 0.999 & 0.863 & ---   & ---   \\ \hline
     PLIP zero-shot (no LC25000 supervision)   & 0.700 & 0.661 & \pending{TBD} & \pending{TBD} \\ \hline
-    ViT-B/14 (DINOv2)                          & \pending{TBD} & \pending{TBD} & \pending{TBD} & \pending{TBD} \\ \hline
     \end{tabular}
-    \caption{Headline summary across the chapter. PLIP-pretrained ViT wins every external evaluation; the lung-side advantage ($+0.335$ F1 over baseline) is an order of magnitude larger than the colon-side advantages. Empty cells (``---'') mark experiments not extended to harder external datasets after the NCT result was already against the lever. Limitations and future work are discussed in Chapter~5.}
+    \caption{Headline summary across the chapter. PLIP-pretrained ViT wins every external evaluation; the lung-side advantage ($+0.335$ F1 over baseline) is an order of magnitude larger than the colon-side advantages. DINOv2 (the same-architecture, general-domain self-supervised control) lands between baseline and PLIP on lung but ties baseline on colon, decomposing PLIP's lung advantage into roughly equal architecture/SSL and histopathology-pretraining contributions. Empty cells (``---'') mark experiments not extended to harder external datasets after the NCT result was already against the lever. Limitations and future work are discussed in Chapter~5.}
     \label{tab:summary-headline}
 \end{table}
