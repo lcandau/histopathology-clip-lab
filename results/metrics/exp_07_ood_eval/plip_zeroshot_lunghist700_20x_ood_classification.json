@@ -1,0 +1,37 @@
+{
+  "experiment": "exp_07_ood_eval",
+  "variant": "plip_zeroshot",
+  "ood_dataset": "LungHist700 (Tabatabaei et al. 2024) - pulmonary histopathology, 20x subset",
+  "image_encoder": "PLIP ViT-B/32 (vinid/plip, frozen, no LC25000 supervision)",
+  "text_encoder": "PLIP CLIP text encoder (frozen, no LC25000 supervision)",
+  "classification_rule": "argmax cosine(image, class-prompt) restricted to LC25000-mappable classes",
+  "classes_evaluated": [
+    "benign lung tissue",
+    "lung adenocarcinoma",
+    "lung squamous cell carcinoma"
+  ],
+  "accuracy": 0.6212,
+  "balanced_accuracy": 0.5667,
+  "macro_f1": 0.5437,
+  "weighted_f1": 0.583,
+  "per_class": {
+    "benign lung tissue": {
+      "precision": 0.7778,
+      "recall": 0.1647,
+      "f1-score": 0.2718,
+      "support": 85
+    },
+    "lung adenocarcinoma": {
+      "precision": 0.6645,
+      "recall": 0.6918,
+      "f1-score": 0.6779,
+      "support": 146
+    },
+    "lung squamous cell carcinoma": {
+      "precision": 0.5714,
+      "recall": 0.8438,
+      "f1-score": 0.6814,
+      "support": 128
+    }
+  }
+}
