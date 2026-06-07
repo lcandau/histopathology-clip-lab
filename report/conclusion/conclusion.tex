@@ -3,55 +3,89 @@
 
 \section{Conclusions}
 \label{sec:concl-conclusions}
+
+\noindent\textbf{Headline.} The image encoder's pretraining is the dominant lever in this study. Holding everything else fixed, swapping the general-purpose ResNet50 (ImageNet supervised) for PLIP's pretrained ViT-B/32 (histopathology image--text contrastive) improves external evaluation by $+0.067$ F1 on close-shift colon (NCT-CRC), $+0.027$ on different-hospital colon (Chaoyang), and $+0.335$ on different-organ lung (LungHist700). None of the other five interventions tested moves the needle comparably. The DINOv2 control reveals that roughly half of PLIP's lung advantage comes from architecture + self-supervised pretraining alone, the other half from histopathology pretraining specifically.
+
+\subsection*{RQ1 --- Baseline behavior and failure modes}
 \begin{itemize}
-    \item Baseline result (RQ1): 63.6\% / 62.7\% macro-F1, worst class lung adenocarcinoma.
-    \item Pathology pretraining (RQ2): PLIP $+7.3$ macro-F1, mainly benign vs malignant.
-    \item Feature adaptation (RQ3): partial unfreezing (last 30 of 178 layers) $+27.1$ macro-F1, broad-based across classes.
-    \item CLIP-paradigm value (RQ4): CLIP and plain CE tie at the frozen-features ceiling ($\sim 0.63$); CLIP wins $+2.6$ macro-F1 over CE under feature adaptation (unfreeze30), broad-based across all classes. The paradigm's primary value remains in capabilities (open-vocabulary, retrieval), not raw accuracy.
-    \item Stain normalization (RQ5): the gain is strongly method-specific. Macenko yields $+11.7$ macro-F1 ($0.627 \to 0.739$) at the frozen-backbone budget, larger than the PLIP zero-shot gain; Vahadane yields $+3.7$ and Reinhard $+2.5$ on the identical pipeline. Composing the best stain method (Macenko) with the best feature-adaptation regime (unfreeze30) reaches \textbf{0.918 macro-F1}, the highest measured in this study --- $+0.020$ over unfreeze30 alone, so the levers compose with diminishing returns rather than additively.
-    \item Biomedical text encoder (RQ6): \textit{TBD}.
-    \item OOD transfer (RQ7): the picture is two-level. The best in-distribution model (Macenko + Unfreeze30, $0.918$) drops to $0.000$ macro-F1 when the same Macenko transform is applied at OOD time --- NCT is already colour-normalised against its own reference and the double-shift is fatal. With the OOD-time Macenko stripped, the same checkpoint reaches $0.201$. The raw-trained Unfreeze30 is the best LC25000-trained transfer at $0.331$; \textbf{PLIP zero-shot beats every LC25000-trained variant at $0.661$ macro-F1}. The cross-distribution UMAP (Figure~\ref{fig:ood-cross-umap}) reveals that LC25000 fine-tuning \emph{does} transfer organ-level structure (NCT colon patches land in the LC25000 colon region of embedding space, not in lung), so the predictions stay within the colon classes; what does not transfer is the within-colon benign-vs-malignant discrimination, which depends on cellular cues that are more sensitive to lab/scanner/label-granularity differences. Only pathology pretraining (PLIP) produces representations that transfer at both organ \emph{and} tissue-state level.
-    \item Cross-cutting observations: saturation of frozen transfer, role of dataset artifacts.
+    \item The frozen general-purpose CLIP pipeline (ResNet50 $+$ BERT) saturates LC25000 at $\sim 0.99$ macro-F1, transfers partially to colon external data ($0.866$ NCT, $0.786$ Chaoyang), and categorically fails on lung external data ($0.305$ on LungHist700, near 3-class chance).
+    \item The lung failure is a regime change, not a smooth degradation: both ResNet50-based variants collapse into a single-class predictor (predicting ``squamous'' on $\sim 90$\% of inputs regardless of true class).
+    \item See Results §\ref{sec:results-baseline}.
+\end{itemize}
+
+\subsection*{RQ2 --- CLIP's foundational-model premise}
+\begin{itemize}
+    \item Validated under shift, not in-distribution. CLIP and a plain CE classifier on the same frozen backbone tie at saturation in-distribution and tie marginally on close-shift external (NCT, plain CE $+0.014$); CLIP's edge appears under heavier shift (Chaoyang $+0.064$ for CLIP, LungHist700 $+0.024$ for CLIP).
+    \item Mechanism: CLIP's bounded-cosine $+$ L2-normalised $+$ temperature-scaled classifier geometry is more robust than the high-confidence softmax, which degenerates under shift into a single-class predictor.
+    \item See Results §\ref{sec:results-foundational-vs-plain}.
+\end{itemize}
+
+\subsection*{RQ3 --- Stain normalization and generalization}
+\begin{itemize}
+    \item No. Stain Macenko normalization with an NCT-NORM reference regresses NCT external macro-F1 by $-0.022$ ($0.844$ vs baseline $0.866$) on the same frozen ResNet50 backbone.
+    \item Mechanism: the frozen backbone was never pretrained on Macenko-normalised inputs; the OD-space round-trip introduces an input-statistic shift the frozen backbone cannot absorb. Stain normalization is an in-distribution lever that can become a liability under shift.
+    \item See Results §\ref{sec:results-stain}.
+\end{itemize}
+
+\subsection*{RQ4 --- Biomedical text encoder pretraining}
+\begin{itemize}
+    \item No effect on the meaningful axis. None of the 6 cells (BERT / BioBERT / PubMedBERT $\times$ bare-name / composed-prompt) beats the baseline on NCT external evaluation; all cells fall within $0.81$--$0.86$ macro-F1.
+    \item Mechanism: the trained projection head absorbs encoder-specific differences; short class-name prompts don't expose biomedical vocabulary richness. CLIP's shift robustness is a property of the classifier geometry, not of the text encoder's domain knowledge.
+    \item Secondary observation: BERT prefers the longer composed prompt; biomedical encoders prefer bare class names --- small but useful for short-prompt design.
+    \item See Results §\ref{sec:results-text-encoder}.
+\end{itemize}
+
+\subsection*{RQ5 --- Image encoder pretraining (the dominant lever)}
+\begin{itemize}
+    \item Replacing ResNet50 with PLIP's pretrained ViT-B/32 (histopathology image--text contrastive) gains $+0.067$ F1 on NCT, $+0.027$ on Chaoyang, and $+0.335$ on LungHist700. None of the head/loss/text-side interventions tested gets close.
+    \item The DINOv2 control (ViT-B/14 with general-domain self-supervised pretraining, no histopathology data) decomposes the lung gain: DINOv2 alone lifts LungHist700 by $+0.152$ over baseline, indicating that $\sim$half of PLIP's lung advantage comes from ``ViT $+$ self-supervised pretraining on diverse natural images'' and $\sim$half from ``histopathology pretraining specifically''.
+    \item On colon, only histopathology pretraining helps; general-domain SSL ties baseline within noise. The lever's contribution is dose-dependent on shift severity.
+    \item See Results §\ref{sec:results-image-encoder}.
+\end{itemize}
+
+\subsection*{RQ6 --- Generalization across 3 external datasets and 2 organs}
+\begin{itemize}
+    \item PLIP's ViT-B/32 wins every external evaluation in the study ($0.933$ NCT, $0.813$ Chaoyang, $0.640$ LungHist700). The lung-side advantage over baseline ($+0.335$ F1) is an order of magnitude larger than the colon-side advantages ($+0.067$ NCT, $+0.027$ Chaoyang).
+    \item The cross-organ asymmetry is a regime change: ResNet50-based variants transfer partially to colon ($0.78$--$0.88$ F1) but categorically fail on lung ($\sim 0.30$, near chance). PLIP shows no such asymmetry.
+    \item Methodological consequence: per-organ external reporting is essential; aggregating across datasets would have hidden the regime change.
+    \item See Results §\ref{sec:results-image-encoder} and §\ref{sec:results-discussion}.
 \end{itemize}
 
 
 \section{Limitations}
 \label{sec:concl-limitations}
 \begin{itemize}
-    \item Single-institution dataset, no patient-level grouping, no clinical validation.
-    \item Small batch + few classes $\to$ InfoNCE false negatives, documented not mitigated.
-    \item Frozen-backbone baseline tests transfer, not full fine-tuning.
-    \item No human-expert evaluation.
-    \item No head-to-head against CONCH / BiomedCLIP / MUSK (compute scope).
+    \item LC25000 is single-institution; no patient-level grouping or clinical validation. Three external datasets (NCT-CRC, Chaoyang, LungHist700) span shift severity and two organs but each is itself a single-institution release.
+    \item LC25000 augmentation-pair leakage: 1\,250 source images $\times$ 20 augmentations are scattered randomly across the 80/10/10 split. Likely the dominant inflater of in-distribution numbers; external evaluations are unaffected.
+    \item 1\,280 byte-identical LC25000 duplicates cross train/test under the canonical pre-dedupe split. Effect $\sim$1--2 F1 points on in-distribution numbers; external evaluations unaffected.
+    \item All variants use a frozen image backbone with a trained projection head and temperature. Full end-to-end fine-tuning is out of scope by design; this study tests the frozen-backbone transfer regime, which is the practical setting for histopathology foundation-model downstream use.
+    \item Single seed per condition; seed variance not estimated. Especially load-bearing for the LungHist700 result ($N=359$ images, per-class supports $85$/$146$/$128$). Bootstrap confidence intervals on the headline lung gap are listed as a high-priority future-work item.
+    \item External evaluation uses restricted argmax over the LC25000-mappable classes: 2-class colon for NCT and Chaoyang, 3-class lung for LungHist700. Richer multi-class external scenarios are out of scope.
+    \item Patch-size confound in the image-encoder ablation: PLIP (ViT-B/32) and DINOv2 (ViT-B/14) differ in both pretraining domain and patch size ($49$ vs $256$ tokens at $224 \times 224$ input). DINOv2's finer patches do not rescue the colon-side gap, indicating patch size is not the dominant factor, but a fully controlled comparison would match patch sizes.
+    \item Stain normalization is evaluated with a single NCT-NORM reference patch for the external evaluation; reference rotation could shift the result.
+    \item LungHist700 source bias is not characterised; the lung-side ResNet50 failure could be partly stain-shift artefact in addition to the architecture limitation.
+    \item No human-expert evaluation; no clinical validation.
+    \item No head-to-head against other histopathology foundation models (UNI, CONCH, Virchow-2, BiomedCLIP, MUSK, PathChat) --- compute and time scope.
 \end{itemize}
 
 
 \section{Future Work}
 \label{sec:concl-future}
 
-Near-term:
+\noindent\textit{Note: this section will be expanded once the rest of the thesis is locked, to ensure the planned follow-ups reflect the final picture of findings.}
+
+\subsection*{Medium-term}
 \begin{itemize}
-    \item Additional external datasets beyond colon-Kaggle.
-    \item SupCon or class-balanced sampling for false-negative regime.
-    \item Patient-level grouping if metadata recoverable.
+    \item Bootstrap confidence intervals on the headline LungHist700 $+0.335$ F1 gap. $\sim$1 hour analysis on saved predictions, no retraining. Defends the claim against the small-$N$ critique ($N=359$ images, per-class supports $85$/$146$/$128$).
+    \item Extend the PLIP zero-shot reference to Chaoyang and LungHist700. Closes the gap so the reference is comparable across all four datasets.
+    \item Larger effective batch (gradient accumulation or larger GPU) to test whether the InfoNCE false-negative regime is binding in our setup.
+    \item Prompt-tuning methods (CoOp, CoCoOp) under frozen encoders --- can a learned prompt close some of the colon-side gap without changing the backbone?
 \end{itemize}
 
-Not run in this project (low expected $\Delta$ under frozen text encoders + short prompts):
+\subsection*{Longer-term}
 \begin{itemize}
-    \item Inference-time prompt ensembling.
-    \item Dynamic prompt training.
-\end{itemize}
-
-Medium-term:
-\begin{itemize}
-    \item Larger effective batch (grad accumulation or bigger GPU).
-    \item Prompt-tuning methods (CoOp, CoCoOp).
-\end{itemize}
-
-Longer-term:
-\begin{itemize}
-    \item Architecture-controlled comparison against CONCH / BiomedCLIP / MUSK / PathChat.
+    \item Architecture-controlled comparison against other histopathology foundation models: UNI, CONCH, Virchow-2, BiomedCLIP, MUSK, PathChat. Disambiguates ``PLIP specifically wins'' from ``any histopathology-pretrained backbone wins''.
     \item Multi-institution training and evaluation.
-    \item Returning to segmentation with pathology FM backbones.
-    \item CLIP-with-short-labels applied to other low-label scientific domains.
+    \item Returning to segmentation with pathology foundation-model backbones.
+    \item CLIP-with-short-labels applied to other low-label scientific domains (e.g., the tutor's gravitational-physics work).
 \end{itemize}

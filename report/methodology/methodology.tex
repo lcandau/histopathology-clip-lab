@@ -51,13 +51,50 @@
     \label{fig:clip-architecture}
 \end{figure}
 
+\subsection{PLIP: a histopathology-pretrained CLIP-style model}
+\label{sec:meth-plip-model}
+\begin{itemize}
+    \item Huang et al. 2023 --- a CLIP-style model pretrained on histopathology image--text pairs.
+    \item Training corpus: OpenPath, $\sim$208k histopathology image--text pairs scraped from Twitter conversations among pathologists, supplemented with LAION subset filtering.
+    \item Architecture: CLIP ViT-B/32 vision encoder paired with a CLIP-style text encoder, both trained contrastively from a CLIP initialisation.
+    \item Used in this thesis in two distinct ways:
+    \begin{itemize}
+        \item As a \emph{zero-shot reference baseline} (\S\ref{sec:meth-reference}): the full PLIP model (image + text encoders) used off-the-shelf for cosine-similarity classification on all four datasets (LC25000 + the three external evaluation sets).
+        \item As a \emph{pretrained image encoder} in our image-encoder ablation (\S\ref{sec:meth-image-vit}): PLIP's ViT-B/32 vision encoder paired with our trained projection head and a separate BERT text encoder.
+    \end{itemize}
+\end{itemize}
+
 
 \section{Image Encoders}
 \label{sec:meth-image}
+
+\subsection{ResNet50 (CNN, ImageNet supervised)}
+\label{sec:meth-image-resnet}
 \begin{itemize}
-    \item ResNet (CNN baseline).
-    \item Vision Transformer (ViT).
-    \item DINO / DINOv2 (self-supervised).
+    \item He et al. 2016, residual learning.
+    \item $\sim$23M parameters, 2048-d output via global average pooling.
+    \item Supervised pretraining on ImageNet-1K ($\sim$1.3M natural images, 1000 classes).
+    \item Role in this thesis: general-purpose image-encoder baseline; carries the assumption that ImageNet features transfer broadly.
+\end{itemize}
+
+\subsection{Vision Transformer (ViT)}
+\label{sec:meth-image-vit}
+\begin{itemize}
+    \item Dosovitskiy et al. 2020.
+    \item Patch-based architecture: image split into $N \times N$ patches, each linearly embedded as a token, then processed by a stack of transformer encoder layers with self-attention.
+    \item The ``B'' sizing (ViT-Base): 12 layers, hidden size 768.
+    \item The ``/16'', ``/32'', ``/14'' suffixes denote patch size; smaller patch $=$ more tokens $=$ finer spatial granularity at the same input resolution.
+    \item Role in this thesis: we use \textbf{PLIP's pretrained ViT-B/32} as one image-encoder variant. PLIP itself is described in \S\ref{sec:meth-plip-model}; this section covers only the ViT architecture used by PLIP's vision encoder.
+\end{itemize}
+
+\subsection{DINOv2 (self-supervised on general natural images)}
+\label{sec:meth-image-dinov2}
+\begin{itemize}
+    \item Oquab et al. 2023/2024.
+    \item Self-supervised pretraining on LVD-142M ($\sim$142M curated general natural images); no labels, no text supervision, no histopathology data.
+    \item Self-distillation between a teacher and student network on augmented crops of the same image.
+    \item We use the \texttt{base} size with patch 14 (\textbf{ViT-B/14}).
+    \item Role in this thesis: a control. Same general ViT architecture family as PLIP's vision encoder, similar self-supervised paradigm, but no histopathology pretraining --- isolates ``ViT $+$ self-supervision'' from ``histopathology pretraining specifically'' in the image-encoder ablation.
 \end{itemize}
 
 
@@ -69,16 +106,27 @@
 \end{itemize}
 
 
-\section{Reference baselines: PLIP and a plain image classifier}
+\section{Reference baselines: PLIP zero-shot and a plain image classifier}
 \label{sec:meth-reference}
+
+\subsection{PLIP zero-shot}
 \begin{itemize}
-    \item PLIP zero-shot (Huang 2023) --- pathology-pretrained CLIP, frozen, no LC25000 training.
-    \item Plain image classifier --- Dense(5)+softmax on frozen ResNet50 trained with cross-entropy; no text encoder, no CLIP architecture.
-    \item Together: PLIP isolates the pretraining-domain contribution; the plain classifier isolates the CLIP-architecture contribution.
+    \item Uses the full PLIP model (\S\ref{sec:meth-plip-model}) --- both image and text encoders, frozen --- for zero-shot classification.
+    \item Class prediction: cosine similarity between the image embedding and the five PLIP-encoded LC25000 class-prompt embeddings, argmax.
+    \item No LC25000 supervision; no projection head trained on our data.
+    \item Evaluated on all four datasets: LC25000 (training source) plus the three external evaluation datasets (NCT-CRC, Chaoyang, LungHist700; the latter two are queued follow-up runs at the time of writing).
+    \item Role: isolates the value of histopathology pretraining alone, without any of our fine-tuning.
+\end{itemize}
+
+\subsection{Plain image classifier}
+\begin{itemize}
+    \item Drops the CLIP paradigm entirely: no text encoder, no projection heads, no learnable temperature, no contrastive loss.
+    \item Architecture: ResNet50 $\to$ Global Average Pooling $\to$ BatchNorm $\to$ Dense(5) trained with sparse cross-entropy.
+    \item Role: isolates what the CLIP paradigm itself contributes once the image encoder, data and adaptation budget are held constant.
 \end{itemize}
 
 
-\section{Dataset: Kaggle LC25000}
+\section{Training Dataset: LC25000}
 \label{sec:meth-dataset}
 \begin{itemize}
     \item Borkowski 2019.
@@ -113,12 +161,72 @@
 \end{table}
 
 
+\section{External Evaluation Datasets}
+\label{sec:meth-external-datasets}
+\begin{itemize}
+    \item Role: data the model has never seen during training. We evaluate every LC25000-trained variant against three external datasets, chosen to span shift severity and two organs.
+    \item Order presented below corresponds to increasing shift severity relative to LC25000.
+\end{itemize}
+
+\subsection{NCT-CRC-HE-7K}
+\begin{itemize}
+    \item Kather et al. 2019, Zenodo record 1214456.
+    \item 7\,180 patches across 9 tissue classes; we restrict to NORM ($\leftrightarrow$ benign colon tissue) and TUM ($\leftrightarrow$ colon adenocarcinoma) for 1\,974 patches scored (741 NORM + 1\,233 TUM).
+    \item $224 \times 224$ patches at $\sim$20$\times$ magnification, Macenko-normalised at release.
+    \item Role: close-shift colon evaluation (stylistically similar acquisition to LC25000).
+\end{itemize}
+
+\subsection{Chaoyang}
+\begin{itemize}
+    \item Zhu et al. 2021.
+    \item 6\,160 patches across 4 classes (normal, serrated, adenocarcinoma, adenoma); we restrict to normal ($\leftrightarrow$ benign colon, $n=1\,816$) and adenocarcinoma ($\leftrightarrow$ colon adeno, $n=2\,244$) for 4\,060 patches scored.
+    \item $512 \times 512$ patches at 20$\times$, Beijing Chaoyang Hospital.
+    \item Documented label noise in the training split; the test split is labelled by consensus of three pathologists.
+    \item Role: different-hospital colon evaluation (different scanner, different staining, label noise).
+\end{itemize}
+
+\subsection{LungHist700}
+\begin{itemize}
+    \item Tabatabaei et al. 2024 (Scientific Data).
+    \item $\sim$691 high-resolution images at 20$\times$ and 40$\times$ covering normal lung tissue plus adenocarcinoma and squamous-cell carcinoma at three differentiation grades each; we restrict to the 20$\times$ subset for 3-class scoring (359 images: 85 normal $+$ 146 AdC $+$ 128 SqC).
+    \item Role: different-organ lung evaluation; the only multi-class scoring among the external datasets.
+\end{itemize}
+
+
 \section{Preprocessing and Input Pipeline}
 \label{sec:meth-pre}
+
+\subsection{Image preprocessing (per-backbone)}
 \begin{itemize}
-    \item Image: resize $224\times224$, ResNet-style preprocessing, no further augmentation.
-    \item Text: BERT WordPiece, fixed sequence length.
-    \item Split: stratified 80/10/10, seed 42, persisted.
+    \item ResNet50: RGB $/$ 255.0 (i.e., $[0, 1]$ linear scaling).
+    \item ViT-B/32 (PLIP): CLIP-standard mean/std normalisation \\
+          mean = $[0.481, 0.458, 0.408]$, std = $[0.269, 0.261, 0.276]$.
+    \item ViT-B/14 (DINOv2): ImageNet mean/std normalisation \\
+          mean = $[0.485, 0.456, 0.406]$, std = $[0.229, 0.224, 0.225]$.
+    \item All inputs resized to $224 \times 224$ bilinear. No additional augmentation (LC25000 already includes rotation/flip augmentation at release).
+    \item Each backbone expects the input distribution it was pretrained on; mismatched preprocessing produces degraded features --- see \S\ref{sec:meth-preprocessing-bug}.
+\end{itemize}
+
+\subsection{Text preprocessing}
+\begin{itemize}
+    \item All text encoders use BERT-family WordPiece tokenizers (BERT, BioBERT, PubMedBERT, and PLIP's text encoder).
+    \item Fixed sequence length 24 tokens (covers all class-prompt formats).
+    \item Composed prompt format: \texttt{"A histopathology image of \{class\_name\}."}.
+\end{itemize}
+
+\subsection{LC25000-specific cleanup}
+\begin{itemize}
+    \item 1\,280 byte-identical duplicate files identified by MD5 grouping; excluded via \texttt{src/data/lc25000\_dedupe\_exclusions.json}.
+    \item Stratified 80/10/10 split, seed 42, persisted to canonical JSON.
+    \item The canonical split file predates the dedupe pass, so the 1\,280 duplicates still cross train/test for the runs reported; flagged as a limitation in Chapter~\ref{chp:conclusion}.
+\end{itemize}
+
+\subsection{Methodological note on preprocessing}
+\label{sec:meth-preprocessing-bug}
+\begin{itemize}
+    \item Mid-project we caught that the pipeline was applying Caffe-style BGR preprocessing to a backbone expecting $[0, 1]$ RGB --- a mismatch from two libraries shipping different ResNet50 checkpoints under the same name.
+    \item The error was surfaced via a linear-probe diagnostic on the frozen features (the probe macro-F1 was well above the trained CLIP ceiling), and fixed with a centralised image loader at \texttt{src/data/images.py}.
+    \item Beyond the project-specific bug, the takeaway is that linear-probing a frozen feature extractor against the trained model's ceiling is a cheap sanity check worth running as a project-foundation step.
 \end{itemize}
 
 
@@ -164,13 +272,35 @@
 
 \section{Evaluation Protocol}
 \label{sec:meth-eval}
+
+\subsection{Metrics and visualizations}
 \begin{itemize}
-    \item Classification: argmax cosine(image, class-prompt).
-    \item Global: accuracy, balanced accuracy, macro-F1, weighted-F1.
-    \item Per-class: precision, recall, F1.
-    \item Confusion matrices: raw + row-normalized.
-    \item Embeddings: shared image+prompt UMAP, centroid-to-prompt heatmap.
-    \item Class-level retrieval, with explicit positive definition.
+    \item Classification rule (CLIP variants): argmax of cosine similarity between the image embedding and the five LC25000 class-prompt embeddings.
+    \item Classification rule (plain classifier): argmax of softmax over Dense(5).
+    \item Global metrics: accuracy, balanced accuracy, macro-F1, weighted F1.
+    \item Per-class: precision, recall, F1, support.
+    \item Confusion matrices: raw counts + row-normalised by true class.
+    \item Visualizations: shared image $+$ prompt UMAP (training source), and cross-distribution UMAP grid per external dataset (LC25000 dots + external triangles overlaid in one fit).
+\end{itemize}
+
+\subsection{External-dataset evaluation: restricted-argmax protocol}
+\begin{itemize}
+    \item Each variant exposes all 5 LC25000 class prompts at inference, but on external evaluation we argmax \emph{only} over the LC25000 classes that map to the external dataset's organ:
+    \begin{itemize}
+        \item NCT and Chaoyang (colon datasets): argmax restricted to \{benign colon tissue, colon adenocarcinoma\}.
+        \item LungHist700 (lung dataset): argmax restricted to \{benign lung tissue, lung adenocarcinoma, lung squamous cell carcinoma\}.
+    \end{itemize}
+    \item Why: external datasets cover only a subset of LC25000 classes; an unrestricted argmax would routinely predict the model's strongest out-of-organ class on these images and produce uninformative misclassifications.
+    \item Predictions into a non-target LC25000 class count as wrong but are reported separately when informative for confusion analysis.
+    \item Pure inference: every variant reuses its LC25000-trained checkpoint; no fine-tuning on external sets.
+    \item Class-mapping rules per dataset are detailed in \S\ref{sec:meth-external-datasets}.
+\end{itemize}
+
+\subsection{Per-organ reporting}
+\begin{itemize}
+    \item Results are reported per external dataset, not averaged across datasets.
+    \item Aggregating across datasets would hide the cross-organ regime change observed in this study (Chapter~\ref{results}); a single mean-OOD number collapses an order-of-magnitude difference between organs into one misleading point.
+    \item Per-dataset reporting is therefore an evaluation choice with explicit methodological motivation.
 \end{itemize}
 
 
@@ -186,8 +316,10 @@
 \section{Computational Setup and Reproducibility}
 \label{sec:meth-compute}
 \begin{itemize}
-    \item Hardware: Google Colab T4, local fallback.
-    \item Stack: TensorFlow + KerasHub; PyTorch + transformers for PLIP only.
-    \item Pinned library versions.
-    \item Seeds + PYTHONHASHSEED + \texttt{tf.config.experimental.enable\_op\_determinism()}.
+    \item Hardware: Google Colab T4 (occasional L4 for longer runs); local CPU/GPU fallback for development and analysis.
+    \item Main stack: TensorFlow + KerasHub for the CLIP-style training pipeline and all downstream evaluation.
+    \item Auxiliary stack: PyTorch + HuggingFace transformers for image-encoder feature extraction when the encoder lacks a TensorFlow port (DINOv2; see below).
+    \item Library versions pinned in \texttt{requirements.txt}.
+    \item Reproducibility: seed 42 across NumPy, TensorFlow, and PyTorch; \texttt{PYTHONHASHSEED} set; \texttt{tf.config.experimental.enable\_op\_determinism()}. Runs are bit-exact on the same hardware; small numerical drift can appear across GPU types but does not change the classification outcomes reported.
+    \item DINOv2 has no TensorFlow port in our environment; its image features are precomputed once in PyTorch and cached to disk as HDF5 (one file per dataset, keyed by image relative path). The TensorFlow training and evaluation pipelines then read from cache. Mathematically equivalent to running the frozen backbone online, since the backbone is frozen and each image always produces the same feature vector. Total cache footprint $\sim$100~MB across LC25000 plus the three external datasets.
 \end{itemize}
