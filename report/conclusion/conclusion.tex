@@ -22,8 +22,9 @@
 
 \subsection*{RQ3 --- Stain normalization and generalization}
 \begin{itemize}
-    \item No. Stain Macenko normalization with an NCT-NORM reference regresses NCT external macro-F1 by $-0.022$ ($0.844$ vs baseline $0.866$) on the same frozen ResNet50 backbone.
-    \item Mechanism: the frozen backbone was never pretrained on Macenko-normalised inputs; the OD-space round-trip introduces an input-statistic shift the frozen backbone cannot absorb. Stain normalization is an in-distribution lever that can become a liability under shift.
+    \item Direction is data-dependent. Macenko(NCT-NORM) at training, with the same transform applied at inference only on OOD datasets that arrive in their native stain palette, \emph{helps} on Chaoyang ($+0.030$ F1) and LungHist700 ($+0.020$ F1) and \emph{regresses} on NCT-CRC ($-0.022$ F1, which is already Macenko-normalised at release).
+    \item Mechanism: when an OOD input genuinely sits in a different stain palette than the training distribution, applying Macenko at inference moves it closer to the model's training-stain space and the frozen backbone produces better features. On NCT, where the input was already approximately in the target stain space, training-time Macenko added a non-linear input-statistic shift the frozen backbone could not absorb for no gain at evaluation.
+    \item Magnitude is modest. Even where Macenko helps, the gain is comparable to the image-encoder lever on Chaoyang ($+0.027$ for PLIP) and an order of magnitude smaller on LungHist700 ($+0.335$ for PLIP). Stain normalization is a useful but not dominant lever.
     \item See Results §\ref{sec:results-stain}.
 \end{itemize}
 

@@ -122,7 +122,7 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 
 \subsection{Training source results}
 \begin{itemize}
-    \item Macro-F1 on the LC25000 test split: \stale{0.6273} \textit{(pre-bug-fix; post-fix all trained variants saturate at $\sim 0.99$; see header banner)}.
+    \item Macro-F1 on the LC25000 test split: $0.996$ (saturated). In-distribution does not discriminate the trained variants in this study --- the meaningful comparison is the external evaluation in \S\ref{sec:results-baseline-ood}.
     \item Confusion concentrates on lung\_aca (hardest discrimination); benign tissues and lung\_scc separate cleanly.
 \end{itemize}
 
@@ -199,9 +199,10 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 \subsection{Configuration}
 \begin{itemize}
     \item Frozen ResNet50 image encoder, frozen BERT text encoder, projection head, symmetric InfoNCE --- identical to the baseline (Section~\ref{sec:results-baseline}). Only the image inputs change.
-    \item Three stain normalization methods compared, fit to a single reference patch and applied deterministically to every training and evaluation image: Macenko, Reinhard, and Vahadane (see Methodology for definitions and references).
-    \item Reference choice evaluated separately: an LC25000-internal benign-colon reference, and an external NCT NORM reference (which puts LC25000 into approximately Kather's stain space).
+    \item \textbf{Method}: Macenko normalization, fit on a single reference patch and applied deterministically to every training and evaluation image. The reference is the first NORM tile from NCT-CRC-HE-7K (``NCT-NORM''), chosen so LC25000 lands in approximately the same stain space NCT arrives in --- which lets us feed NCT raw at evaluation without a second Macenko pass.
+    \item At external evaluation time, Chaoyang and LungHist700 patches (native stain at release) are passed through the same Macenko(NCT-NORM) transform so they land in the model's training-stain space. NCT-CRC patches are fed raw (already approximately in that space at release).
     \item Inputs are cached on Drive after one-time normalization so re-runs of the downstream model are cheap.
+    \item Reinhard and Vahadane were also explored as alternative normalizations in an exploratory pass but did not progress to the full external-evaluation ablation: Vahadane's NMF solver fails to converge on a fraction of LC25000 patches (visible in Figure~\ref{fig:stain-before-after}(d)) and Reinhard is a Lab-space colour-statistics transfer rather than a stain-decomposition method, included in the figure for visual comparison only.
 \end{itemize}
 
 \begin{figure}[ht]
@@ -232,23 +233,39 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 
 \subsection{Training source results}
 \begin{itemize}
-    \item Three pre-bug-fix LC25000 macro-F1 numbers: Macenko \stale{$0.7390$}, Vahadane \stale{$0.6644$}, Reinhard \stale{$0.6526$}.
-    \item Post-bug-fix all three saturate at $\sim 0.99$ on LC25000 --- the in-distribution differences between methods evaporate. In-distribution does not discriminate these methods.
-    \item \textbf{Observation that survives the saturation}: Macenko delivers $\sim 3\times$ Vahadane's gain pre-bug-fix on the same pipeline. Mechanism: Macenko and Vahadane share the same stain-decomposition principle (decompose the image's optical-density matrix into a H/E stain matrix and per-pixel concentrations, re-render with the reference's basis) but differ in solver --- Macenko uses closed-form SVD, Vahadane uses iterative sparse NMF. On LC25000 the NMF solver fails to converge on a fraction of patches (visible in Figure~\ref{fig:stain-before-after}(c)), so the realised gain depends on solver stability, not just on the underlying principle.
+    \item Macro-F1 on LC25000 with Macenko(NCT-NORM) at training: $0.986$, saturated alongside baseline. In-distribution does not discriminate this lever (or any other trained variant in this study).
 \end{itemize}
 
 \subsection{Generalization to external datasets}
 \begin{itemize}
-    \item Macro-F1 on NCT-CRC with Macenko applied at training (NCT-NORM reference): \textbf{0.844}. The baseline is $0.866$. \textbf{Stain normalization regresses by $-0.022$ F1 under generalization.}
-    \item Mechanism: the frozen ResNet50 image encoder was never trained on Macenko-normalised inputs. The optical-density round-trip introduces a subtle non-linear shift in input statistics that the frozen backbone cannot adapt to. The pre-bug-fix headline that ``stain normalization is a large in-distribution lever'' does \emph{not} survive the external evaluation: on the meaningful axis (cross-source generalization), it actively hurts.
-    \item We did not extend the stain ablation to Chaoyang or LungHist700 once the NCT regression landed --- the input-side conclusion was already against the lever.
+    \item Three-dataset external evaluation with the Macenko(NCT-NORM) checkpoint, restricted argmax per dataset:
+\end{itemize}
+
+\begin{table}[ht]
+    \centering
+    \small
+    \begin{tabular}{|l|c|c|c|}
+    \hline
+    \textbf{External dataset} & \textbf{Baseline F1} & \textbf{Macenko F1} & \textbf{Delta} \\ \hline
+    NCT-CRC-HE-7K (close-shift colon)         & $0.866$ & $0.844$ & $-0.022$ \\ \hline
+    Chaoyang (different-hospital colon)       & $0.786$ & $0.816$ & $+0.030$ \\ \hline
+    LungHist700 (different-organ lung, 20$\times$)  & $0.305$ & $0.325$ & $+0.020$ \\ \hline
+    \end{tabular}
+    \caption{Macenko(NCT-NORM) vs baseline on the three external evaluation datasets. Macenko helps where the OOD patches arrive in their native stain palette (Chaoyang, LungHist700) and regresses on NCT, which arrives already Macenko-normalised at release.}
+    \label{tab:stain-3way}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{The lever's direction is data-dependent}: it \emph{helps} on the two datasets that arrive in their native stain space (Chaoyang $+0.030$ F1, LungHist700 $+0.020$ F1, both receiving Macenko at inference to land in the training-stain space); it \emph{regresses} on NCT-CRC ($-0.022$ F1), the only dataset that was already partially Macenko-normalised at release.
+    \item Mechanism: when the OOD input genuinely sits in a different stain palette than training, Macenko at inference moves it closer to the model's training distribution and the frozen backbone produces better features. When the input is already in (approximately) the target stain space, applying Macenko at training added a non-linear input-statistic shift that the frozen backbone could not absorb, and the eval-time pass-through cannot recover the small cost paid.
+    \item \textbf{Magnitude is modest}. The $+0.020$--$+0.030$ F1 gains on Chaoyang and LungHist700 are real but small. By comparison, swapping the image encoder to PLIP (Section~\ref{sec:results-image-encoder}) gains $+0.027$ on Chaoyang (comparable to Macenko) but $+0.335$ on LungHist700 (an order of magnitude larger). Stain normalization is not the dominant lever even where it helps.
 \end{itemize}
 
 \subsection{What we learned}
 \begin{itemize}
-    \item Stain normalization is an \emph{in-distribution lever} that does not transfer. Under domain shift it can become a liability.
-    \item ``Stain normalization helps'' compresses two effects: (a) shortcut-removal on the training distribution, (b) input-statistic shift the frozen backbone cannot absorb. The first is in-distribution only; the second hurts under generalization.
-    \item Methodologically: stain normalization is a real and important technique for cross-laboratory histopathology pipelines, but its benefit depends on the downstream model being trained (or fine-tuned) on the normalised inputs; freezing a non-normalised backbone and feeding it normalised inputs at evaluation is the wrong arrangement.
+    \item Stain normalization's effect under shift is \emph{data-dependent}. It transfers where it normalizes away genuine native-stain differences, and regresses where the input was already in the target stain space (here, NCT-CRC's release-time Macenko-normalised state).
+    \item Once you commit to Macenko at training time, the right protocol is to apply the same Macenko at evaluation time \emph{only} on OOD inputs that do not arrive in the target stain space already. Doubling normalization on a pre-normalised target is what historically broke the OOD F1 entirely (the ``double-Macenko'' regime we surfaced earlier in the project).
+    \item Methodologically: stain normalization is a real, low-cost lever for cross-laboratory histopathology pipelines, but at the frozen-backbone scale evaluated here its gain is dominated by image-encoder pretraining choice on the same datasets.
 \end{itemize}
 
 
@@ -511,7 +528,7 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 
 \subsection{Synthesis across experiments}
 \begin{itemize}
-    \item This chapter evaluated six interventions on a frozen general-purpose CLIP pipeline (ResNet50 + BERT). Five of the six (stain normalization, biomedical text encoders, plain-classifier substitution, and the prompt-format variations within the text-encoder ablation) produce changes within $\sim 5$ F1 of the baseline on the close-shift external dataset (NCT) and \emph{no} measurable improvement when the model is evaluated on data it has never seen.
+    \item This chapter evaluated six interventions on a frozen general-purpose CLIP pipeline (ResNet50 + BERT). Five of the six (stain normalization, biomedical text encoders, plain-classifier substitution, the prompt-format variations within the text-encoder ablation) produce changes within $\sim 0.03$ F1 of the baseline on close-shift external evaluation (NCT) and at most $\sim 0.03$ F1 of improvement on the harder external datasets. Stain Macenko is the only input-side lever that moves the needle positively under shift ($+0.030$ on Chaoyang, $+0.020$ on LungHist700), but its magnitude is dominated by the image-encoder lever on the same datasets.
     \item The sixth intervention --- replacing the image encoder's pretraining (Section~\ref{sec:results-image-encoder}) --- moves the headline metric by $+0.067$ on close-shift colon (NCT), $+0.027$ on different-hospital colon (Chaoyang), and \textbf{$+0.335$ on different-organ lung (LungHist700)}, taking the lung result from a degenerate single-class predictor at $0.305$ to a functional 3-class classifier at $0.640$.
     \item The DINOv2 and PLIP-zero-shot controls together decompose that gain on lung into a clean ladder: $0.305$ (baseline) $\to$ $0.457$ (DINOv2: ViT $+$ SSL contribution, $+0.152$) $\to$ $0.544$ (PLIP zero-shot: histopath pretraining contribution, $+0.087$) $\to$ $0.640$ (PLIP-backbone: LC25000 supervision on top, $+0.096$). Three roughly equal steps of $\sim 0.1$ F1. On colon, the decomposition collapses --- DINOv2 ties baseline and PLIP zero-shot actually falls below baseline on Chaoyang ($0.731$ vs $0.786$) because LC25000 supervision was already enough.
     \item \textbf{The image encoder's pretraining is the dominant lever}, by roughly $5\times$ over the next-largest single lever on colon external evaluation. On lung, no head/loss/text-side intervention rescues a non-functional predictor at all; only changing the encoder does.
@@ -536,10 +553,10 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
     ViT-B/14 (DINOv2)                          & 0.989 & 0.855 & 0.776 & 0.457 \\ \hline
     Baseline (ResNet50 + BERT)                & 0.996 & 0.866 & 0.786 & 0.305 \\ \hline
     Plain CE classifier                        & 0.995 & 0.880 & 0.722 & 0.281 \\ \hline
-    Stain Macenko (NCT-NORM reference)        & 0.986 & 0.844 & ---   & ---   \\ \hline
+    Stain Macenko (NCT-NORM reference)        & 0.986 & 0.844 & 0.816 & 0.325 \\ \hline
     Best text-encoder cell (BERT + composed)  & 0.999 & 0.863 & ---   & ---   \\ \hline
     PLIP zero-shot (no LC25000 supervision)   & 0.700 & 0.661 & 0.731 & 0.544 \\ \hline
     \end{tabular}
-    \caption{Headline summary across the chapter. PLIP-pretrained ViT wins every external evaluation; the lung-side advantage ($+0.335$ F1 over baseline) is an order of magnitude larger than the colon-side advantages. DINOv2 (the same-architecture, general-domain self-supervised control) lands between baseline and PLIP on lung but ties baseline on colon, decomposing PLIP's lung advantage into roughly equal architecture/SSL and histopathology-pretraining contributions. Empty cells (``---'') mark experiments not extended to harder external datasets after the NCT result was already against the lever. Limitations and future work are discussed in Chapter~5.}
+    \caption{Headline summary across the chapter. PLIP-pretrained ViT wins every external evaluation; the lung-side advantage ($+0.335$ F1 over baseline) is an order of magnitude larger than the colon-side advantages. DINOv2 (the same-architecture, general-domain self-supervised control) lands between baseline and PLIP on lung but ties baseline on colon, decomposing PLIP's lung advantage into roughly equal architecture/SSL and histopathology-pretraining contributions. Stain Macenko (NCT-NORM) helps on the two datasets that arrive in their native stain palette (Chaoyang $+0.030$, LungHist700 $+0.020$) and regresses on NCT ($-0.022$), which arrives already Macenko-normalised at release. Empty cells (``---'') mark experiments not extended to harder external datasets after the close-shift NCT result was already against the lever (text-encoder ablations). Limitations and future work are discussed in Chapter~5.}
     \label{tab:summary-headline}
 \end{table}
