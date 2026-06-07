@@ -1,0 +1,31 @@
+{
+  "experiment": "exp_07_ood_eval",
+  "variant": "dinov2_bert_composed",
+  "ood_dataset": "Chaoyang (Zhu et al. 2021)",
+  "classes_evaluated": [
+    "benign colon tissue",
+    "colon adenocarcinoma"
+  ],
+  "n_tiles_scored": 4060,
+  "n_normal": 1816,
+  "n_adenocarcinoma": 2244,
+  "accuracy": 0.786,
+  "balanced_accuracy": 0.7718,
+  "macro_f1": 0.7755,
+  "weighted_f1": 0.7806,
+  "per_class": {
+    "benign colon tissue": {
+      "precision": 0.8464,
+      "recall": 0.6371,
+      "f1-score": 0.727,
+      "support": 1816
+    },
+    "colon adenocarcinoma": {
+      "precision": 0.7553,
+      "recall": 0.9064,
+      "f1-score": 0.824,
+      "support": 2244
+    }
+  },
+  "note": "DINOv2 on Chaoyang different-hospital colon: marginally below baseline (0.776 vs 0.786), well below PLIP (0.813). Same pattern as NCT."
+}

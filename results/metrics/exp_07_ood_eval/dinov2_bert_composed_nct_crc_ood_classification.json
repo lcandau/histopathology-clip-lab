@@ -1,0 +1,31 @@
+{
+  "experiment": "exp_07_ood_eval",
+  "variant": "dinov2_bert_composed",
+  "ood_dataset": "NCT-CRC-HE-7K (Kather 2019)",
+  "classes_evaluated": [
+    "benign colon tissue",
+    "colon adenocarcinoma"
+  ],
+  "n_tiles": 1974,
+  "n_norm": 741,
+  "n_tum": 1233,
+  "accuracy": 0.8617,
+  "balanced_accuracy": 0.8605,
+  "macro_f1": 0.8547,
+  "weighted_f1": 0.8627,
+  "per_class": {
+    "benign colon tissue": {
+      "precision": 0.7925,
+      "recall": 0.8556,
+      "f1-score": 0.8228,
+      "support": 741
+    },
+    "colon adenocarcinoma": {
+      "precision": 0.9089,
+      "recall": 0.8654,
+      "f1-score": 0.8866,
+      "support": 1233
+    }
+  },
+  "note": "DINOv2 on NCT close-shift colon: ~baseline (0.855 vs 0.866) and below PLIP (0.933). General-domain SSL pretraining does not help on the easiest external dataset."
+}
