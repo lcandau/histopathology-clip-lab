@@ -6,17 +6,17 @@
 % foundation models. Deep-learning lineage covered in Methodology.
 
 \begin{itemize}
-    \item Foundation models framing (Bommasani 2021).
-    \item CLIP and multimodal contrastive learning (Radford 2021) --- the paradigm under study.
-    \item Self-supervised visual pretraining for medical imaging --- DINO, DINOv2.
+    \item Foundation models framing (Bommasani et al.~\cite{bommasani2021foundation}, 2021).
+    \item CLIP and multimodal contrastive learning (Radford et al.~\cite{radford2021clip}, 2021; see also ALIGN~\cite{jia2021align}) --- the paradigm under study.
+    \item Self-supervised visual pretraining --- contrastive (SimCLR~\cite{chen2020simclr}, MoCo~\cite{he2020moco}), self-distillation (DINO~\cite{caron2021dino}), and scaled SSL on diverse natural images (DINOv2~\cite{oquab2024dinov2}).
     \item Pathology shift: per-tile supervised CNNs $\to$ foundation models (2016--2024).
     \item Pathology-specific foundation models:
     \begin{itemize}
-        \item TransPath (2022) --- transformer + SSL.
-        \item Phikon (2023) --- masked image modelling.
-        \item PLIP (2023) --- CLIP on medical Twitter.
-        \item CONCH (2024) --- larger pathology VLM.
-        \item BiomedCLIP, MUSK --- recent entrants.
+        \item TransPath~\cite{wang2022transpath} (2022) --- transformer + SSL.
+        \item Phikon~\cite{filiot2023phikon} (2023) --- masked image modelling.
+        \item PLIP~\cite{huang2023plip} (2023) --- CLIP on medical Twitter.
+        \item CONCH~\cite{lu2024conch} (2024) --- larger pathology VLM.
+        \item UNI~\cite{chen2024uni} (2024), BiomedCLIP~\cite{zhang2023biomedclip} (2023), MUSK~\cite{xiang2025musk} (2025) --- recent entrants.
     \end{itemize}
     \item Open challenges: benchmarks, dataset bias, cross-institution generalization, compute scale.
     \item Where this project fits: small-scale empirical study of general-purpose foundation backbones on pathology classification, with single-variable ablations.

@@ -79,12 +79,12 @@
     \item Bootstrap confidence intervals on the headline LungHist700 $+0.335$ F1 gap. $\sim$1 hour analysis on saved predictions, no retraining. Defends the claim against the small-$N$ critique ($N=359$ images, per-class supports $85$/$146$/$128$).
     \item Extend the PLIP zero-shot reference to Chaoyang and LungHist700. Closes the gap so the reference is comparable across all four datasets.
     \item Larger effective batch (gradient accumulation or larger GPU) to test whether the InfoNCE false-negative regime is binding in our setup.
-    \item Prompt-tuning methods (CoOp, CoCoOp) under frozen encoders --- can a learned prompt close some of the colon-side gap without changing the backbone?
+    \item Prompt-tuning methods (CoOp~\cite{zhou2022coop}, CoCoOp) under frozen encoders --- can a learned prompt close some of the colon-side gap without changing the backbone?
 \end{itemize}
 
 \subsection*{Longer-term}
 \begin{itemize}
-    \item Architecture-controlled comparison against other histopathology foundation models: UNI, CONCH, Virchow-2, BiomedCLIP, MUSK, PathChat. Disambiguates ``PLIP specifically wins'' from ``any histopathology-pretrained backbone wins''.
+    \item Architecture-controlled comparison against other histopathology foundation models: UNI~\cite{chen2024uni}, CONCH~\cite{lu2024conch}, BiomedCLIP~\cite{zhang2023biomedclip}, MUSK~\cite{xiang2025musk}. Disambiguates ``PLIP specifically wins'' from ``any histopathology-pretrained backbone wins''.
     \item Multi-institution training and evaluation.
     \item Returning to segmentation with pathology foundation-model backbones.
     \item CLIP-with-short-labels applied to other low-label scientific domains (e.g., the tutor's gravitational-physics work).

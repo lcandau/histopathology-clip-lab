@@ -14,7 +14,7 @@
 \begin{itemize}
     \item H\&E staining.
     \item Whole-Slide Imaging + patch extraction.
-    \item Stain variability and normalization (Macenko, Reinhard, Vahadane).
+    \item Stain variability and normalization (Macenko~\cite{macenko2009stain}, Reinhard~\cite{reinhard2001color}, Vahadane~\cite{vahadane2016structure}).
     \item Why the domain is hard for general-purpose VLMs: domain gap from natural images, no per-image captions in clinical archives, dataset artifacts that can drive performance.
 \end{itemize}
 
@@ -54,7 +54,7 @@
 \subsection{PLIP: a histopathology-pretrained CLIP-style model}
 \label{sec:meth-plip-model}
 \begin{itemize}
-    \item Huang et al. 2023 --- a CLIP-style model pretrained on histopathology image--text pairs.
+    \item Huang et al.~\cite{huang2023plip} (2023) --- a CLIP-style model pretrained on histopathology image--text pairs.
     \item Training corpus: OpenPath, $\sim$208k histopathology image--text pairs scraped from Twitter conversations among pathologists, supplemented with LAION subset filtering.
     \item Architecture: CLIP ViT-B/32 vision encoder paired with a CLIP-style text encoder, both trained contrastively from a CLIP initialisation.
     \item Used in this thesis in two distinct ways:
@@ -71,7 +71,7 @@
 \subsection{ResNet50 (CNN, ImageNet supervised)}
 \label{sec:meth-image-resnet}
 \begin{itemize}
-    \item He et al. 2016, residual learning.
+    \item He et al.~\cite{he2016resnet} (2016), residual learning.
     \item $\sim$23M parameters, 2048-d output via global average pooling.
     \item Supervised pretraining on ImageNet-1K ($\sim$1.3M natural images, 1000 classes).
     \item Role in this thesis: general-purpose image-encoder baseline; carries the assumption that ImageNet features transfer broadly.
@@ -80,7 +80,7 @@
 \subsection{Vision Transformer (ViT)}
 \label{sec:meth-image-vit}
 \begin{itemize}
-    \item Dosovitskiy et al. 2020.
+    \item Dosovitskiy et al.~\cite{dosovitskiy2021vit} (2020).
     \item Patch-based architecture: image split into $N \times N$ patches, each linearly embedded as a token, then processed by a stack of transformer encoder layers with self-attention.
     \item The ``B'' sizing (ViT-Base): 12 layers, hidden size 768.
     \item The ``/16'', ``/32'', ``/14'' suffixes denote patch size; smaller patch $=$ more tokens $=$ finer spatial granularity at the same input resolution.
@@ -90,7 +90,7 @@
 \subsection{DINOv2 (self-supervised on general natural images)}
 \label{sec:meth-image-dinov2}
 \begin{itemize}
-    \item Oquab et al. 2023/2024.
+    \item Oquab et al.~\cite{oquab2024dinov2} (2024).
     \item Self-supervised pretraining on LVD-142M ($\sim$142M curated general natural images); no labels, no text supervision, no histopathology data.
     \item Self-distillation between a teacher and student network on augmented crops of the same image.
     \item We use the \texttt{base} size with patch 14 (\textbf{ViT-B/14}).
@@ -101,8 +101,8 @@
 \section{Text Encoders}
 \label{sec:meth-text}
 \begin{itemize}
-    \item Transformer + BERT --- text encoder used by baseline.
-    \item BioBERT / PubMedBERT --- biomedical text encoder swap ablation.
+    \item Transformer~\cite{vaswani2017attention} $+$ BERT~\cite{devlin2019bert} --- text encoder used by baseline.
+    \item BioBERT~\cite{lee2020biobert} $/$ PubMedBERT~\cite{gu2021pubmedbert} --- biomedical text encoder swap ablation.
 \end{itemize}
 
 
@@ -129,7 +129,7 @@
 \section{Training Dataset: LC25000}
 \label{sec:meth-dataset}
 \begin{itemize}
-    \item Borkowski 2019.
+    \item Borkowski et al.~\cite{borkowski2019lc25000} (2019).
     \item 5 tissue classes (lung, colon).
     \item 25\,000 patches from 1\,250 originals via rotation/flip $\to$ no further geometric augmentation.
     \item Known limits: single institution, possible stain artifacts, no patient-level grouping.
@@ -170,7 +170,7 @@
 
 \subsection{NCT-CRC-HE-7K}
 \begin{itemize}
-    \item Kather et al. 2019, Zenodo record 1214456.
+    \item Kather et al.~\cite{kather2019nct} (2019), Zenodo record 1214456.
     \item 7\,180 patches across 9 tissue classes; we restrict to NORM ($\leftrightarrow$ benign colon tissue) and TUM ($\leftrightarrow$ colon adenocarcinoma) for 1\,974 patches scored (741 NORM + 1\,233 TUM).
     \item $224 \times 224$ patches at $\sim$20$\times$ magnification, Macenko-normalised at release.
     \item Role: close-shift colon evaluation (stylistically similar acquisition to LC25000).
@@ -178,7 +178,7 @@
 
 \subsection{Chaoyang}
 \begin{itemize}
-    \item Zhu et al. 2021.
+    \item Zhu et al.~\cite{zhu2021chaoyang} (2022; preprint 2021).
     \item 6\,160 patches across 4 classes (normal, serrated, adenocarcinoma, adenoma); we restrict to normal ($\leftrightarrow$ benign colon, $n=1\,816$) and adenocarcinoma ($\leftrightarrow$ colon adeno, $n=2\,244$) for 4\,060 patches scored.
     \item $512 \times 512$ patches at 20$\times$, Beijing Chaoyang Hospital.
     \item Documented label noise in the training split; the test split is labelled by consensus of three pathologists.
@@ -187,7 +187,7 @@
 
 \subsection{LungHist700}
 \begin{itemize}
-    \item Tabatabaei et al. 2024 (Scientific Data).
+    \item Tabatabaei et al.~\cite{tabatabaei2024lunghist} (2024, \emph{Scientific Data}).
     \item $\sim$691 high-resolution images at 20$\times$ and 40$\times$ covering normal lung tissue plus adenocarcinoma and squamous-cell carcinoma at three differentiation grades each; we restrict to the 20$\times$ subset for 3-class scoring (359 images: 85 normal $+$ 146 AdC $+$ 128 SqC).
     \item Role: different-organ lung evaluation; the only multi-class scoring among the external datasets.
 \end{itemize}
@@ -309,7 +309,7 @@
 \begin{itemize}
     \item Single-variable-change principle.
     \item Matrix grouped by axis of variation; full matrix in §\ref{sec:experiment-matrix}.
-    \item Scope boundaries: no patient-level grouping, no human-expert evaluation, no architecture-controlled comparison vs CONCH / BiomedCLIP / MUSK. Deferred to future work.
+    \item Scope boundaries: no patient-level grouping, no human-expert evaluation, no architecture-controlled comparison vs CONCH~\cite{lu2024conch} $/$ BiomedCLIP~\cite{zhang2023biomedclip} $/$ MUSK~\cite{xiang2025musk}. Deferred to future work.
 \end{itemize}
 
 

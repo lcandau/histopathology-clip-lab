@@ -7,11 +7,12 @@
 \addcontentsline{toc}{listasf}{Resumen}
 
 \begin{itemize}
-    \item Contexto: clasificación de imágenes histopatológicas con datos etiquetados limitados y etiquetas repetidas.
-    \item Enfoque: aprendizaje contrastivo imagen-texto al estilo CLIP con codificadores fundacionales congelados.
-    \item Datos: Kaggle LC25000, 5 clases de tejido de pulmón y colon.
-    \item Diseño experimental: línea base controlada + matriz de ablaciones (una variable a la vez).
-    \item Resultados (parciales): línea base 63.6\,\% accuracy / 62.7\,\% macro-F1; PLIP cero-disparo +7.3 macro-F1; ajuste fino parcial (últimas 30 capas) +27.1 macro-F1 (89.8\,\% / 89.8\,\%).
+    \item \textbf{Contexto.} Clasificación de imágenes histopatológicas bajo el cuello de botella recurrente del dominio: datos etiquetados limitados y vocabularios de etiquetas estrechos.
+    \item \textbf{Enfoque.} Aprendizaje contrastivo imagen--texto al estilo CLIP con codificadores fundacionales congelados. Sobre una línea base controlada (ResNet50 + BERT congelados) se evalúa una matriz de ablaciones de una sola variable, entrenadas en Kaggle LC25000 (5 clases de tejido pulmonar y colónico) y evaluadas tanto sobre LC25000 como sobre tres conjuntos externos no vistos en entrenamiento.
+    \item \textbf{Resultado principal.} El \emph{preentrenamiento del codificador de imagen} es, con diferencia, la palanca dominante. Manteniendo el resto del pipeline idéntico y sustituyendo el ResNet50 de propósito general (ImageNet) por el ViT-B/32 preentrenado en histopatología de PLIP, la macro-F1 externa mejora en $+0.067$ en colon de cercanía (NCT-CRC), $+0.027$ en colon de otro hospital (Chaoyang) y $+0.335$ en pulmón de otro órgano (LungHist700).
+    \item \textbf{Descomposición con DINOv2.} Un ViT-B/14 con preentrenamiento autosupervisado en imágenes naturales generales (sin histopatología) eleva LungHist700 en $+0.152$ sobre la línea base --- aproximadamente la mitad de la ganancia de PLIP. La otra mitad procede del preentrenamiento específico en histopatología.
+    \item \textbf{Hallazgos negativos.} Las otras cinco intervenciones probadas (normalización de tinción, codificadores de texto biomédicos, clasificador de entropía cruzada sin CLIP, variaciones de formato de \emph{prompt}, cambios de paradigma CLIP) no mejoran la generalización a datos no vistos. La ventaja de CLIP sobre un clasificador no-CLIP aparece sólo bajo desplazamiento más fuerte, vía la geometría \emph{coseno + L2-normalizada + escalada por temperatura} del clasificador.
+    \item \textbf{Aporte metodológico.} El reporte por órgano es esencial: agregar los conjuntos externos en un único número promedio oculta el cambio de régimen entre colon (transferencia parcial con ResNet50/ImageNet congelado) y pulmón (fallo categórico del mismo \emph{backbone}).
 \end{itemize}
 
 
@@ -22,9 +23,10 @@
 \addcontentsline{toc}{listasf}{Abstract}
 
 \begin{itemize}
-    \item Context: histopathology image classification under limited labelled data and repeated labels.
-    \item Approach: CLIP-style image-text contrastive learning with frozen foundation-model encoders.
-    \item Data: Kaggle LC25000, five lung and colon tissue classes.
-    \item Experimental design: a controlled baseline + a single-variable ablation matrix.
-    \item Results (partial): baseline 63.6\,\% accuracy / 62.7\,\% macro-F1; PLIP zero-shot +7.3 macro-F1; partial fine-tuning (last 30 layers) +27.1 macro-F1 (89.8\,\% / 89.8\,\%).
+    \item \textbf{Context.} Histopathology image classification under the domain's recurring bottleneck: limited labelled data and narrow label vocabularies.
+    \item \textbf{Approach.} CLIP-style image--text contrastive learning with frozen foundation-model encoders. A single-variable ablation matrix is evaluated over a controlled baseline (frozen ResNet50 + frozen BERT), trained on Kaggle LC25000 (5 lung and colon tissue classes) and evaluated on both LC25000 and three additional external datasets the model has never seen.
+    \item \textbf{Headline result.} The \emph{image encoder's pretraining} is by far the dominant lever. Holding the rest of the pipeline identical and swapping the general-purpose ResNet50 (ImageNet) for PLIP's histopathology-pretrained ViT-B/32 lifts external macro-F1 by $+0.067$ on close-shift colon (NCT-CRC), $+0.027$ on different-hospital colon (Chaoyang), and $+0.335$ on different-organ lung (LungHist700).
+    \item \textbf{DINOv2 decomposition.} A ViT-B/14 with self-supervised pretraining on general natural images (no histopathology data) lifts LungHist700 by $+0.152$ over baseline --- roughly half of PLIP's gain. The other half comes from histopathology-specific pretraining.
+    \item \textbf{Null findings.} The other five interventions tested (stain normalization, biomedical text encoders, a non-CLIP cross-entropy classifier, prompt-format variations, CLIP-paradigm changes) do not measurably improve generalization to unseen data. CLIP's edge over a non-CLIP classifier appears only under heavier shift, via the \emph{bounded-cosine + L2-normalised + temperature-scaled} classifier geometry.
+    \item \textbf{Methodological contribution.} Per-organ external reporting is essential: aggregating external datasets into a single mean-OOD number hides the regime change between colon (partial transfer with a frozen ImageNet ResNet50) and lung (categorical failure of the same backbone).
 \end{itemize}
