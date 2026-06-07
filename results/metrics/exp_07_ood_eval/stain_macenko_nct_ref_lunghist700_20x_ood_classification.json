@@ -1,0 +1,41 @@
+{
+    "experiment": "exp_07_ood_eval",
+    "variant": "stain_macenko_nct_ref",
+    "checkpoint": "exp_04_stain_normalization/stain_macenko_nct_ref/weights.weights.h5",
+    "ood_dataset": "LungHist700 20x (Tabatabaei et al., 2024) - lung, different organ",
+    "classes_evaluated": [
+        "benign lung tissue",
+        "lung adenocarcinoma",
+        "lung squamous cell carcinoma"
+    ],
+    "n_tiles_total": 359,
+    "n_tiles_scored": 359,
+    "n_normal": 85,
+    "n_adenocarcinoma": 146,
+    "n_squamous": 128,
+    "accuracy": 0.4485,
+    "balanced_accuracy": 0.3821,
+    "macro_f1": 0.3247,
+    "weighted_f1": 0.3705,
+    "per_class": {
+        "benign lung tissue": {
+            "precision": 0.6667,
+            "recall": 0.0235,
+            "f1-score": 0.0455,
+            "support": 85
+        },
+        "lung adenocarcinoma": {
+            "precision": 0.4306,
+            "recall": 0.8493,
+            "f1-score": 0.5714,
+            "support": 146
+        },
+        "lung squamous cell carcinoma": {
+            "precision": 0.5147,
+            "recall": 0.2734,
+            "f1-score": 0.3571,
+            "support": 128
+        }
+    },
+    "note": "Macenko applied to native-stain LungHist700 patches at inference: 0.325 macro_f1 vs 0.305 baseline = +0.020 F1. Marginal positive in the lung catastrophic-failure regime."
+}
