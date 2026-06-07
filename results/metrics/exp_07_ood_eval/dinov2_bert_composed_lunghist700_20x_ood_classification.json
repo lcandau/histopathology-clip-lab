@@ -1,0 +1,39 @@
+{
+  "experiment": "exp_07_ood_eval",
+  "variant": "dinov2_bert_composed",
+  "ood_dataset": "LungHist700 (Tabatabaei et al. 2024, 20x subset)",
+  "classes_evaluated": [
+    "benign lung tissue",
+    "lung adenocarcinoma",
+    "lung squamous cell carcinoma"
+  ],
+  "n_tiles": 359,
+  "n_normal": 85,
+  "n_adenocarcinoma": 146,
+  "n_squamous": 128,
+  "accuracy": 0.4624,
+  "balanced_accuracy": 0.4593,
+  "macro_f1": 0.4567,
+  "weighted_f1": 0.4689,
+  "per_class": {
+    "benign lung tissue": {
+      "precision": 0.3145,
+      "recall": 0.4588,
+      "f1-score": 0.3732,
+      "support": 85
+    },
+    "lung adenocarcinoma": {
+      "precision": 0.4841,
+      "recall": 0.5205,
+      "f1-score": 0.5017,
+      "support": 146
+    },
+    "lung squamous cell carcinoma": {
+      "precision": 0.6538,
+      "recall": 0.3984,
+      "f1-score": 0.4951,
+      "support": 128
+    }
+  },
+  "note": "HEADLINE for the control: DINOv2 partially rescues the lung-side collapse (0.457 vs baseline 0.305, +0.152 F1) but does not match PLIP (0.640, +0.183 F1 over DINOv2). Decomposition: ~half of PLIP's lung advantage comes from architecture+SSL, the other half from histopathology pretraining specifically. Per-class recall (0.46/0.52/0.40) is far more balanced than the baseline's degenerate (0.19/0.07/0.89) predictor."
+}
