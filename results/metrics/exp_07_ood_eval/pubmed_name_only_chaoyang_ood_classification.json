@@ -1,0 +1,38 @@
+{
+    "experiment": "exp_07_ood_eval",
+    "variant": "pubmed_name_only",
+    "checkpoint": "exp_06_biomed_text/pubmed_name_only/weights.weights.h5",
+    "ood_dataset": "Chaoyang (Zhu et al., 2022) - colorectal, different hospital",
+    "classes_evaluated": [
+        "benign colon tissue",
+        "colon adenocarcinoma"
+    ],
+    "n_tiles_total": 6160,
+    "n_tiles_scored": 4060,
+    "n_normal": 1816,
+    "n_adenocarcinoma": 2244,
+    "excluded": {
+        "serrated": 1163,
+        "adenoma": 937,
+        "_reason": "no clean LC25000 analogue"
+    },
+    "accuracy": 0.8039,
+    "balanced_accuracy": 0.7907,
+    "macro_f1": 0.795,
+    "weighted_f1": 0.7995,
+    "per_class": {
+        "benign colon tissue": {
+            "precision": 0.8653,
+            "recall": 0.6652,
+            "f1-score": 0.7522,
+            "support": 1816
+        },
+        "colon adenocarcinoma": {
+            "precision": 0.7718,
+            "recall": 0.9162,
+            "f1-score": 0.8378,
+            "support": 2244
+        }
+    },
+    "note": "PubMedBERT + name-only prompts on different-hospital colon: 0.795 macro_f1 vs 0.786 baseline = +0.009 F1, within run-to-run noise. Biomedical text encoder does not measurably improve transfer here."
+}

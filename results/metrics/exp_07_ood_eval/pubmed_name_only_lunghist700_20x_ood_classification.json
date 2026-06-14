@@ -1,0 +1,41 @@
+{
+    "experiment": "exp_07_ood_eval",
+    "variant": "pubmed_name_only",
+    "checkpoint": "exp_06_biomed_text/pubmed_name_only/weights.weights.h5",
+    "ood_dataset": "LungHist700 20x (Tabatabaei et al., 2024) - lung, different organ",
+    "classes_evaluated": [
+        "benign lung tissue",
+        "lung adenocarcinoma",
+        "lung squamous cell carcinoma"
+    ],
+    "n_tiles_total": 359,
+    "n_tiles_scored": 359,
+    "n_benign_lung": 85,
+    "n_adenocarcinoma": 146,
+    "n_squamous": 128,
+    "accuracy": 0.3844,
+    "balanced_accuracy": 0.3677,
+    "macro_f1": 0.2785,
+    "weighted_f1": 0.2833,
+    "per_class": {
+        "benign lung tissue": {
+            "precision": 0.5,
+            "recall": 0.1059,
+            "f1-score": 0.1748,
+            "support": 85
+        },
+        "lung adenocarcinoma": {
+            "precision": 0.4231,
+            "recall": 0.0753,
+            "f1-score": 0.1279,
+            "support": 146
+        },
+        "lung squamous cell carcinoma": {
+            "precision": 0.3746,
+            "recall": 0.9219,
+            "f1-score": 0.5327,
+            "support": 128
+        }
+    },
+    "note": "PubMedBERT + name-only prompts on different-organ lung: 0.279 macro_f1 vs 0.305 baseline = -0.026 F1. Same degenerate-predictor regime as baseline but slightly worse: predicts squamous cell on ~92% of inputs, near-zero recall on the other 2 lung classes. Biomedical text encoder does not rescue the lung catastrophic-failure regime; it makes it marginally worse."
+}
