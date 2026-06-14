@@ -31,6 +31,7 @@
 \subsection*{RQ4 --- Biomedical text encoder pretraining}
 \begin{itemize}
     \item No effect on the meaningful axis. None of the 6 cells (BERT / BioBERT / PubMedBERT $\times$ bare-name / composed-prompt) beats the baseline on NCT external evaluation; all cells fall within $0.81$--$0.86$ macro-F1.
+    \item Extended to 3 external datasets via the best biomedical cell (PubMedBERT + name\_only): no transfer benefit. Ties baseline on Chaoyang ($+0.009$, within noise), regresses on NCT ($-0.011$) and LungHist700 ($-0.026$). On LungHist700 the model collapses to a single-class predictor ($\sim 92$\% squamous), same regime as baseline but with sharper collapse.
     \item Mechanism: the trained projection head absorbs encoder-specific differences; short class-name prompts don't expose biomedical vocabulary richness. CLIP's shift robustness is a property of the classifier geometry, not of the text encoder's domain knowledge.
     \item Secondary observation: BERT prefers the longer composed prompt; biomedical encoders prefer bare class names --- small but useful for short-prompt design.
     \item See Results §\ref{sec:results-text-encoder}.

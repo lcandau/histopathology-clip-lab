@@ -404,7 +404,7 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
     \item Tests RQ4 (does biomedical text pretraining help under short class-name prompts?).
 \end{itemize}
 
-\subsection{Results}
+\subsection{NCT-CRC grid (6 cells)}
 \begin{table}[ht]
     \centering
     \small
@@ -418,7 +418,7 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
     PubMedBERT + name\_only & 0.995 & 0.855 & $-0.011$ \\ \hline
     PubMedBERT + composed   & 0.996 & 0.808 & $-0.058$ \\ \hline
     \end{tabular}
-    \caption{6-cell biomedical text encoder ablation, macro-F1. \textbf{None of the 6 cells beats the baseline ($0.866$ on NCT).} LC25000 in-distribution saturates uniformly; all generalization numbers land in the $0.81$--$0.86$ band, none above baseline.}
+    \caption{6-cell biomedical text encoder ablation, macro-F1 on NCT-CRC. \textbf{None of the 6 cells beats the baseline ($0.866$ on NCT).} LC25000 in-distribution saturates uniformly; all generalization numbers land in the $0.81$--$0.86$ band. The BERT + composed cell is essentially baseline (same architecture, same prompt template); the best \emph{biomedical} cell --- PubMedBERT + name\_only at $0.855$ --- still trails baseline by $-0.011$ F1.}
     \label{tab:text-encoder}
 \end{table}
 
@@ -431,13 +431,36 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 
 \begin{itemize}
     \item LC25000 in-distribution: all cells saturate uniformly. The training-source axis does not discriminate these encoders.
-    \item NCT generalization: all 6 cells land in the $0.81$--$0.86$ band. None beats the baseline ($0.866$); the best cell (BERT $+$ composed, $0.863$) is essentially a tie.
-    \item Chaoyang and LungHist700 were not extended to the 6-cell grid: the NCT result was already against the lever, and extending to harder external datasets would only have widened the gap below baseline.
+    \item NCT generalization: all 6 cells land in the $0.81$--$0.86$ band. None beats the baseline.
+\end{itemize}
+
+\subsection{Generalization to Chaoyang and LungHist700}
+\begin{itemize}
+    \item The best biomedical cell on NCT --- PubMedBERT + name\_only --- was extended to Chaoyang and LungHist700 to test whether biomedical text encoders carry any advantage under heavier shift:
+\end{itemize}
+
+\begin{table}[ht]
+    \centering
+    \small
+    \begin{tabular}{|l|c|c|c|}
+    \hline
+    \textbf{External dataset} & \textbf{Baseline F1} & \textbf{PubMedBERT+name\_only F1} & \textbf{Delta} \\ \hline
+    NCT-CRC-HE-7K (close-shift colon)               & $0.866$ & $0.855$ & $-0.011$ \\ \hline
+    Chaoyang (different-hospital colon)             & $0.786$ & $0.795$ & $+0.009$ \\ \hline
+    LungHist700 (different-organ lung, 20$\times$)  & $0.305$ & $0.279$ & $-0.026$ \\ \hline
+    \end{tabular}
+    \caption{Best biomedical text-encoder cell (PubMedBERT + name\_only) vs baseline on the three external evaluation datasets. The biomedical text encoder ties baseline on Chaoyang (within noise) and regresses on both NCT and LungHist700. No measurable transfer benefit on any of the three datasets.}
+    \label{tab:text-encoder-3way}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{No transfer.} The best biomedical cell ties baseline on Chaoyang ($+0.009$, within noise) and \emph{regresses} on LungHist700 ($-0.026$). Combined with the NCT result ($-0.011$), no biomedical-text-encoder configuration tested produces a measurable gain on any external dataset.
+    \item \textbf{LungHist700 collapse signature.} Both baseline and PubMedBERT+name\_only collapse on lung, just to different classes. Baseline predicts ``lung squamous cell carcinoma'' on most inputs in the degenerate regime; PubMedBERT+name\_only also collapses to lung\_scc but harder ($\sim 92$\% of predictions). In both cases the per-class recall on the other two lung classes is near-zero --- a single-class predictor regime where the text encoder choice only affects how \emph{sharply} the collapse manifests.
 \end{itemize}
 
 \subsection{What we learned}
 \begin{itemize}
-    \item Biomedical text pretraining does \emph{not} help on this task at frozen-backbone scale with short class-name prompts.
+    \item Biomedical text pretraining does \emph{not} help on this task at frozen-backbone scale with short class-name prompts. Confirmed across three external datasets: PubMedBERT + name\_only (the best biomedical cell on NCT) ties baseline on Chaoyang and regresses on both NCT and LungHist700.
     \item \textbf{Mechanism --- why doesn't ``a more domain-aware text encoder'' improve results?} Three converging reasons:
     \begin{itemize}
         \item \emph{The projection head absorbs encoder-specific differences.} BERT, BioBERT, and PubMedBERT all start from different 768-d embedding spaces, but they all get pulled through the same projection head trained on LC25000. The head learns to map any reasonable starting embedding to useful class anchors. With only 5 LC25000 classes to separate, this is an easy adaptation regardless of where the starting embeddings sit.
@@ -528,7 +551,7 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 
 \subsection{Synthesis across experiments}
 \begin{itemize}
-    \item This chapter evaluated six interventions on a frozen general-purpose CLIP pipeline (ResNet50 + BERT). Five of the six (stain normalization, biomedical text encoders, plain-classifier substitution, the prompt-format variations within the text-encoder ablation) produce changes within $\sim 0.03$ F1 of the baseline on close-shift external evaluation (NCT) and at most $\sim 0.03$ F1 of improvement on the harder external datasets. Stain Macenko is the only input-side lever that moves the needle positively under shift ($+0.030$ on Chaoyang, $+0.020$ on LungHist700), but its magnitude is dominated by the image-encoder lever on the same datasets.
+    \item This chapter evaluated six interventions on a frozen general-purpose CLIP pipeline (ResNet50 + BERT). Five of the six (stain normalization, biomedical text encoders, plain-classifier substitution, the prompt-format variations within the text-encoder ablation) produce changes within $\sim 0.03$ F1 of the baseline on close-shift external evaluation (NCT) and at most $\sim 0.03$ F1 of improvement on the harder external datasets. Stain Macenko is the only input-side lever that moves the needle positively under shift ($+0.030$ on Chaoyang, $+0.020$ on LungHist700), but its magnitude is dominated by the image-encoder lever on the same datasets. The best biomedical text-encoder cell (PubMedBERT + name\_only) confirms the null result across all 3 external datasets --- ties baseline on Chaoyang, regresses on NCT and LungHist700.
     \item The sixth intervention --- replacing the image encoder's pretraining (Section~\ref{sec:results-image-encoder}) --- moves the headline metric by $+0.067$ on close-shift colon (NCT), $+0.027$ on different-hospital colon (Chaoyang), and \textbf{$+0.335$ on different-organ lung (LungHist700)}, taking the lung result from a degenerate single-class predictor at $0.305$ to a functional 3-class classifier at $0.640$.
     \item The DINOv2 and PLIP-zero-shot controls together decompose that gain on lung into a clean ladder: $0.305$ (baseline) $\to$ $0.457$ (DINOv2: ViT $+$ SSL contribution, $+0.152$) $\to$ $0.544$ (PLIP zero-shot: histopath pretraining contribution, $+0.087$) $\to$ $0.640$ (PLIP-backbone: LC25000 supervision on top, $+0.096$). Three roughly equal steps of $\sim 0.1$ F1. On colon, the decomposition collapses --- DINOv2 ties baseline and PLIP zero-shot actually falls below baseline on Chaoyang ($0.731$ vs $0.786$) because LC25000 supervision was already enough.
     \item \textbf{The image encoder's pretraining is the dominant lever}, by roughly $5\times$ over the next-largest single lever on colon external evaluation. On lung, no head/loss/text-side intervention rescues a non-functional predictor at all; only changing the encoder does.
@@ -554,9 +577,9 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
     Baseline (ResNet50 + BERT)                & 0.996 & 0.866 & 0.786 & 0.305 \\ \hline
     Plain CE classifier                        & 0.995 & 0.880 & 0.722 & 0.281 \\ \hline
     Stain Macenko (NCT-NORM reference)        & 0.986 & 0.844 & 0.816 & 0.325 \\ \hline
-    Best text-encoder cell (BERT + composed)  & 0.999 & 0.863 & ---   & ---   \\ \hline
+    Best biomedical text-encoder cell (PubMedBERT + name\_only) & 0.995 & 0.855 & 0.795 & 0.279 \\ \hline
     PLIP zero-shot (no LC25000 supervision)   & 0.700 & 0.661 & 0.731 & 0.544 \\ \hline
     \end{tabular}
-    \caption{Headline summary across the chapter. PLIP-pretrained ViT wins every external evaluation; the lung-side advantage ($+0.335$ F1 over baseline) is an order of magnitude larger than the colon-side advantages. DINOv2 (the same-architecture, general-domain self-supervised control) lands between baseline and PLIP on lung but ties baseline on colon, decomposing PLIP's lung advantage into roughly equal architecture/SSL and histopathology-pretraining contributions. Stain Macenko (NCT-NORM) helps on the two datasets that arrive in their native stain palette (Chaoyang $+0.030$, LungHist700 $+0.020$) and regresses on NCT ($-0.022$), which arrives already Macenko-normalised at release. Empty cells (``---'') mark experiments not extended to harder external datasets after the close-shift NCT result was already against the lever (text-encoder ablations). Limitations and future work are discussed in Chapter~5.}
+    \caption{Headline summary across the chapter. PLIP-pretrained ViT wins every external evaluation; the lung-side advantage ($+0.335$ F1 over baseline) is an order of magnitude larger than the colon-side advantages. DINOv2 (the same-architecture, general-domain self-supervised control) lands between baseline and PLIP on lung but ties baseline on colon, decomposing PLIP's lung advantage into roughly equal architecture/SSL and histopathology-pretraining contributions. Stain Macenko (NCT-NORM) helps on the two datasets that arrive in their native stain palette (Chaoyang $+0.030$, LungHist700 $+0.020$) and regresses on NCT ($-0.022$), which arrives already Macenko-normalised at release. The best biomedical text-encoder cell (PubMedBERT + name\_only) ties baseline on Chaoyang and regresses on both NCT and LungHist700 --- no measurable transfer benefit on any of the three datasets. Limitations and future work are discussed in Chapter~5.}
     \label{tab:summary-headline}
 \end{table}
