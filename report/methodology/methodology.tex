@@ -44,10 +44,92 @@
 
 \begin{figure}[ht]
     \centering
-    \fbox{\begin{minipage}[c][7cm][c]{0.85\textwidth}\centering
-        \footnotesize Two independent encoders project image and text into a shared $d$-dimensional embedding space. The cosine-similarity matrix across a batch is the input to the symmetric InfoNCE loss.
-    \end{minipage}}
-    \caption{CLIP dual-encoder architecture used in this project.}
+    \begin{tikzpicture}[
+        font=\footnotesize,
+        x=1cm, y=1cm,
+        encoder/.style ={draw, rounded corners=2pt, minimum width=2.6cm, minimum height=1.0cm,
+                         fill=blue!8, line width=0.4pt},
+        proj/.style    ={draw, rounded corners=2pt, minimum width=2.0cm, minimum height=0.7cm,
+                         fill=gray!8, line width=0.4pt},
+        sample/.style  ={draw, minimum width=1.7cm, minimum height=1.0cm, line width=0.4pt,
+                         align=center, inner sep=2pt},
+        emb/.style     ={draw, circle, minimum size=0.45cm, inner sep=0pt, line width=0.3pt},
+        arr/.style     ={->, >=stealth, line width=0.5pt},
+        >=stealth,
+    ]
+    %% Left -- inputs
+    \node[sample, fill=red!5]  (img1) at (0,  1.6) {\textit{image} $I_1$};
+    \node[sample, fill=red!5]  (img2) at (0,  0.4) {\textit{image} $I_2$};
+    \node                       at (0, -0.6) {$\vdots$};
+    \node[sample, fill=red!5]  (imgN) at (0, -1.6) {\textit{image} $I_N$};
+
+    \node[sample, fill=green!5] (txt1) at (0, -3.0) {\texttt{"benign lung}\\\texttt{tissue"}};
+    \node[sample, fill=green!5] (txt2) at (0, -4.4) {\texttt{"colon}\\\texttt{adenocarcinoma"}};
+    \node                        at (0, -5.4) {$\vdots$};
+    \node[sample, fill=green!5] (txtN) at (0, -6.4) {\texttt{prompt}~$T_N$};
+
+    %% Encoders
+    \node[encoder] (imenc) at (3.4,  0.0) {Image encoder};
+    \node[encoder] (txenc) at (3.4, -4.7) {Text encoder};
+
+    %% Projections
+    \node[proj] (improj) at (6.2,  0.0) {$W_I$ (256-d)};
+    \node[proj] (txproj) at (6.2, -4.7) {$W_T$ (256-d)};
+
+    %% L2 / temperature
+    \node[align=center, font=\scriptsize\itshape] at (6.2,  -1.05) {L2-norm};
+    \node[align=center, font=\scriptsize\itshape] at (6.2,  -5.75) {L2-norm};
+
+    %% Arrows: inputs -> encoder (fan-in to encoder's western edge)
+    \foreach \src in {img1, img2, imgN}
+        \draw[arr] (\src.east) -- (imenc.west);
+    \foreach \src in {txt1, txt2, txtN}
+        \draw[arr] (\src.east) -- (txenc.west);
+
+    %% Encoders -> projections
+    \draw[arr] (imenc) -- (improj);
+    \draw[arr] (txenc) -- (txproj);
+
+    %% Cosine similarity matrix
+    \def\mx{9.2}      % left edge of matrix
+    \def\my{-3.4}     % bottom edge of matrix
+    \def\cs{0.55}     % cell size
+    \pgfmathsetmacro{\mtop}{\my + 4*\cs}
+    \pgfmathsetmacro{\mright}{\mx + 4*\cs}
+    \foreach \i in {0,1,2,3} {
+        \foreach \j in {0,1,2,3} {
+            \pgfmathsetmacro{\cx}{\mx + \j*\cs}
+            \pgfmathsetmacro{\cy}{\my + (3-\i)*\cs}
+            \ifnum\i=\j
+                \draw[fill=blue!28, line width=0.2pt] (\cx,\cy) rectangle ++(\cs,\cs);
+            \else
+                \draw[fill=gray!8,  line width=0.2pt] (\cx,\cy) rectangle ++(\cs,\cs);
+            \fi
+        }
+    }
+    %% Matrix labels
+    \node[anchor=south, font=\scriptsize] at (\mx + 2*\cs, \mtop + 0.15) {$T_1\ T_2\ \cdots\ T_N$};
+    \node[anchor=east,  font=\scriptsize, align=right]
+        at (\mx - 0.10, \my + 2*\cs) {$I_1$\\$I_2$\\$\vdots$\\$I_N$};
+    \node[anchor=south, font=\scriptsize\itshape] at (\mx + 2*\cs, \mtop + 0.55)
+        {Cosine similarity $\bigl(I_i \cdot T_j / \tau\bigr)$};
+
+    %% Projection -> matrix arrows
+    \draw[arr] (improj.east) .. controls (8.2, 0) and (8.6, -1.2) .. (\mx + 2*\cs, \mtop + 0.05);
+    \draw[arr] (txproj.east) .. controls (8.2, -4.7) and (8.6, -3.6) .. (\mx + 2*\cs, \my - 0.05);
+
+    %% InfoNCE loss callout
+    \node[draw, rounded corners=2pt, fill=orange!10, line width=0.4pt,
+          minimum width=2.6cm, minimum height=0.7cm, align=center, font=\scriptsize]
+          (loss) at (\mright + 1.8, \my + 2*\cs) {symmetric\\InfoNCE loss};
+    \draw[arr] (\mright, \my + 2*\cs) -- (loss.west);
+
+    %% Section labels
+    \node[font=\scriptsize\bfseries, anchor=south] at (0,  2.45) {Image batch};
+    \node[font=\scriptsize\bfseries, anchor=south] at (0, -2.55) {Text batch (class prompts)};
+
+    \end{tikzpicture}
+    \caption{CLIP dual-encoder architecture used in this project. Two independent encoders project a batch of $N$ image--text pairs into a shared $d$-dimensional embedding space (here $d = 256$, the projection head's output). After L2-normalisation and a learnable temperature $\tau$, the $N \times N$ cosine-similarity matrix between every image and every prompt is the input to the symmetric InfoNCE loss. The diagonal (blue) entries are the positive pairs; off-diagonal entries are negatives within the batch.}
     \label{fig:clip-architecture}
 \end{figure}
 
@@ -137,10 +219,8 @@
 
 \begin{figure}[ht]
     \centering
-    \fbox{\begin{minipage}[c][4.5cm][c]{0.95\textwidth}\centering
-        \footnotesize Five-class sample: "benign lung", "lung adenocarcinoma", "lung squamous cell carcinoma", "benign colon", "colon adenocarcinoma".
-    \end{minipage}}
-    \caption{Example image per class from LC25000.}
+    \includegraphics[width=0.95\textwidth]{../results/plots/methodology/lc25000_class_samples.png}
+    \caption{Example image per class from LC25000. Left-to-right: benign lung tissue, lung adenocarcinoma, lung squamous cell carcinoma, benign colon tissue, colon adenocarcinoma. The two benign classes appear visually distinct from the cancer classes; within the cancers, lung adenocarcinoma vs lung squamous cell carcinoma is the hardest discrimination in our experiments (and a clinical confound).}
     \label{fig:lc25000-samples}
 \end{figure}
 
