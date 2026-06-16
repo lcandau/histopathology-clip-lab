@@ -42,6 +42,15 @@
     \item CLIP-paper sample-level retrieval $\to$ doesn't apply (class-shared prompts).
 \end{itemize}
 
+Figure~\ref{fig:clip-paradigm} reproduces the canonical CLIP paradigm as introduced by Radford et al.~\cite{radford2021clip}: contrastive image--text pretraining (panel 1) builds a shared embedding space; class prompts then become the zero-shot classifier (panels 2--3). Figure~\ref{fig:clip-architecture} is the specific instantiation of that paradigm used in this thesis --- short histopathology class prompts, $256$-d projection heads on top of frozen foundation-model encoders, and a single fixed prompt strategy used at both training and evaluation time.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.95\textwidth]{../results/plots/methodology/clip_paradigm_radford2021.png}
+    \caption{The CLIP paradigm as introduced by Radford et al., 2021 (Figure 1 of the original paper, reproduced for illustration). \textbf{(1) Contrastive pre-training}: two encoders project a batch of image--text pairs into a shared embedding space; the in-batch cosine-similarity matrix is supervised so the diagonal pairs (matched) score higher than off-diagonals (mismatched). \textbf{(2) Build a dataset-specific classifier from label text}: any new task is cast as text by encoding class-name prompts through the same text encoder. \textbf{(3) Zero-shot prediction}: an unseen image is classified by cosine-similarity argmax against the class prompts --- no task-specific training needed.}
+    \label{fig:clip-paradigm}
+\end{figure}
+
 \begin{figure}[ht]
     \centering
     \begin{tikzpicture}[
