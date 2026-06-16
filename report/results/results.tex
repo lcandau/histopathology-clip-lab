@@ -32,20 +32,16 @@
 
 \subsection{Research questions}
 \label{sec:results-rqs}
-\begin{itemize}
-    \item \textbf{RQ1} --- What baseline classification and generalization behavior does a frozen general-purpose CLIP pipeline achieve on LC25000, and what failure modes appear?
-    \item \textbf{RQ2} --- Does the CLIP paradigm validate its \emph{foundational-model} premise --- learn one task, generalize to tasks it was not specifically trained for --- relative to a non-CLIP classifier on the same image encoder?
-    \item \textbf{RQ3} --- Does stain normalization, an input-side preprocessing that targets a known shortcut in histopathology, help when we evaluate on datasets the model was never trained on?
-    \item \textbf{RQ4} --- Does using a text encoder pretrained on biomedical text (BioBERT, PubMedBERT), instead of generic BERT, improve performance under short class-name prompts?
-    \item \textbf{RQ5} --- Does the image encoder's \emph{pretraining choice} matter? Specifically: (i) replacing the general-purpose ResNet50 with a Visual Transformer pretrained on histopathology image--text pairs (PLIP/OpenPath), and (ii) replacing it with a Visual Transformer pretrained self-supervised on general natural images (DINOv2), as a control that isolates ``ViT architecture and self-supervision'' from ``histopathology pretraining specifically''.
-    \item \textbf{RQ6} --- How well does each variant generalize to data the model has never seen, evaluated against three external datasets across two organs that span shift severity (close-shift colon, different-hospital colon, different-organ lung)?
-\end{itemize}
 
-\subsection{Experiment matrix}
-\label{sec:experiment-matrix}
+The chapter is built around six research questions, each targeting a single design axis of a CLIP-style histopathology pipeline: the baseline reference, the CLIP-versus-non-CLIP choice, the input-side preprocessing, the text encoder, the image encoder, and cross-dataset generalisation. Five of them (RQ1--RQ5) are answered by a dedicated experiment section in this chapter; RQ6 is cross-cutting and is addressed by the external evaluations run alongside every other experiment. The experiment matrix in Table~\ref{tab:experiment-matrix} below maps each RQ to the controlled comparison that addresses it.
+
 \begin{itemize}
-    \item Each row below is one experiment. Each one fixes the rest of the pipeline and changes exactly one axis relative to the baseline.
-    \item All variants are evaluated on the same training-source test split (LC25000) and the same three external datasets (Section~\ref{sec:results-ood-framework}).
+    \item \textbf{RQ1} --- What baseline classification and generalisation behaviour does a frozen general-purpose CLIP pipeline achieve on LC25000, and what failure modes appear?
+    \item \textbf{RQ2} --- Does the CLIP paradigm validate its \emph{foundational-model} premise --- learning one task and generalising to tasks it was not specifically trained for --- relative to a non-CLIP classifier on the same image encoder?
+    \item \textbf{RQ3} --- Does stain normalisation, an input-side preprocessing that targets a known shortcut in histopathology, help when evaluating on datasets the model was never trained on?
+    \item \textbf{RQ4} --- Does using a text encoder pretrained on biomedical text (BioBERT, PubMedBERT), instead of generic BERT, improve performance under short class-name prompts?
+    \item \textbf{RQ5} --- Does the image encoder's \emph{pretraining choice} matter? We test two alternatives to the ImageNet-supervised ResNet50 baseline: (a) a Visual Transformer pretrained on histopathology image--text pairs (PLIP), and (b) a Visual Transformer pretrained self-supervised on general natural images (DINOv2), which serves as a control to separate the contribution of ``ViT architecture and self-supervision'' from ``histopathology pretraining specifically''.
+    \item \textbf{RQ6} --- How well does each variant generalise to data the model has never seen? We evaluate every variant against three external datasets across two organs that span shift severity: close-shift colon, different-hospital colon, and different-source lung.
 \end{itemize}
 
 \begin{table}[ht]
@@ -69,27 +65,29 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 
 \subsection{Training source and external datasets}
 \label{sec:results-ood-framework}
+
+Every variant in this chapter is trained on a single source dataset and evaluated on three external datasets it has never seen during training. The training source is LC25000~\cite{borkowski2019lc25000}, already introduced in §\ref{sec:results-baseline-config}: every trained variant is fit on it, and the in-distribution test split yields the macro-F1 we refer to as \emph{training-source results} throughout the chapter. The three external datasets --- the source of every \emph{generalisation} number in the chapter --- are listed in order of shift severity:
+
 \begin{itemize}
-    \item \textbf{Training source}: LC25000 (5 classes, 80/10/10 stratified split, dedupe applied; see Methodology). Macro-F1 on the LC25000 test split is what we call ``training source results'' below; for the rigor-minded reader this is the in-distribution evaluation.
-    \item \textbf{External datasets} (data the model has never seen during training; we call this ``generalization to external datasets'' below; for the rigor-minded reader these are out-of-distribution evaluations):
-    \begin{itemize}
-        \item \textbf{NCT-CRC-HE-7K} (close-shift colon, $1\,974$ patches; mapped 2-class: NORM $\leftrightarrow$ benign colon, TUM $\leftrightarrow$ colon adenocarcinoma).
-        \item \textbf{Chaoyang} (different-hospital colon, $4\,060$ patches scored from a $6\,160$-image release; mapped 2-class: normal $\leftrightarrow$ benign colon, adenocarcinoma $\leftrightarrow$ colon adeno).
-        \item \textbf{LungHist700} (different-organ lung, $359$ images at 20$\times$ from a $\sim 691$-image release; mapped 3-class: normal/AdC/SqC $\leftrightarrow$ benign lung / lung adeno / lung squamous).
-    \end{itemize}
-    \item \textbf{Restricted-argmax evaluation}: each variant exposes all 5 LC25000 class prompts at inference; we argmax only over the LC25000 classes that map to the external dataset's organ (2 colon classes for NCT/Chaoyang, 3 lung classes for LungHist700). Misclassifications into a non-target LC25000 class count as wrong but are reported separately when informative for confusion analysis.
-    \item \textbf{Pure inference}: every variant reuses its LC25000-trained checkpoint. No fine-tuning on the external sets.
-    \item \textbf{Per-dataset reporting}: results are presented per dataset, not averaged. Aggregating across datasets would hide the cross-organ regime change surfaced in Section~\ref{sec:results-image-encoder}.
+    \item \textbf{NCT-CRC-HE-7K}~\cite{kather2019nct}, close-shift colon: $1\,974$ scored patches over the \texttt{NORM} and \texttt{TUM} classes, mapping to \emph{benign colon tissue} and \emph{colon adenocarcinoma} in LC25000.
+    \item \textbf{Chaoyang}~\cite{zhu2021chaoyang}, different-hospital colon: $4\,060$ scored patches (\texttt{normal} and \texttt{adenocarcinoma}; the \texttt{serrated} and \texttt{adenoma} classes have no clean LC25000 analogue and are excluded from scoring), mapping to the same two LC25000 colon classes as NCT.
+    \item \textbf{LungHist700}~\cite{tabatabaei2024lunghist}, different-source lung: $359$ images at $20\times$ magnification (the $40\times$ subset is excluded), mapping to LC25000's \emph{benign lung tissue}, \emph{lung adenocarcinoma}, and \emph{lung squamous cell carcinoma}.
 \end{itemize}
+
+Full dataset provenance, acquisition details, and per-dataset preprocessing live in Methodology (§\ref{sec:meth-external-datasets}); the bullets above keep only what is needed to interpret the external-evaluation tables in the rest of the chapter.
+
+Three protocol choices apply to every external evaluation that follows. First, \textbf{restricted argmax}: each variant exposes all $5$ LC25000 class prompts at inference, but the argmax is restricted to the LC25000 classes that map to the external dataset's organ ($2$ colon classes for NCT and Chaoyang, $3$ lung classes for LungHist700). Predictions into a non-target LC25000 class count as wrong but are reported separately when informative for confusion analysis. Second, \textbf{pure inference}: every variant reuses its LC25000-trained checkpoint without further adaptation; no fine-tuning is performed on the external datasets. Third, \textbf{per-dataset reporting}: results are presented per dataset rather than averaged. The motivation for that last choice is methodological --- aggregating across datasets would average a colon-side partial transfer ($\sim 0.79$--$0.87$ F1) with a lung-side categorical failure ($0.305$ F1 in the baseline), producing a single mean-OOD number that hides the cross-organ regime change that ends up driving the chapter's headline result in §\ref{sec:results-image-encoder}.
 
 \subsection{Metrics and visualizations}
 \label{sec:results-metrics}
+
+Each variant in this chapter is reported with the same set of metrics and visualisations. The choices and what each is meant to surface:
 \begin{itemize}
-    \item \textbf{Macro-F1} is the headline metric (class-balanced; reflects per-class precision/recall tradeoffs better than raw accuracy on uneven class supports).
-    \item Accuracy, balanced accuracy, weighted F1 and per-class precision/recall/F1 reported alongside for completeness.
-    \item \textbf{Confusion matrices} (raw and row-normalised) per variant per dataset --- the most direct view of how a model distributes errors across classes.
-    \item \textbf{Training-source UMAP}: image embeddings $+$ class-prompt embeddings projected into the same 2-D fit (cosine metric). Reads: cluster separation, cluster alignment to prompt markers.
-    \item \textbf{Cross-distribution UMAP grid} (per OOD dataset, per variant): a 2$\times$3 grid showing LC25000 dots overlaid with external-dataset triangles in one fit. Reads: does the external dataset co-locate with the matching LC25000 class cluster, or sit in its own region of feature space?
+    \item \textbf{Macro-F1} is the headline metric. It averages the per-class F1 scores equally, which is the right behaviour for the per-class precision--recall trade-offs that drive the chapter's substantive comparisons. Formal definitions are in Methodology (§\ref{sec:meth-eval}).
+    \item \textbf{Accuracy, balanced accuracy, weighted F1, and per-class precision/recall/F1} are reported alongside macro-F1 for completeness, but the chapter's interpretive weight is on macro-F1 and the per-class numbers.
+    \item \textbf{Confusion matrices} (raw counts and row-normalised by true class) are reported per variant and per dataset --- the most direct view of how a model distributes its errors across the available classes.
+    \item \textbf{Training-source UMAP} projects LC25000 image embeddings and class-prompt embeddings into the same 2-D fit (cosine metric), letting the reader see cluster separation and the alignment between image clusters and prompt anchors.
+    \item \textbf{Cross-distribution UMAP grid} (per external dataset, per variant) overlays LC25000 dots and external-dataset triangles in a single 2-D fit, asking whether the external dataset co-locates with the matching LC25000 class cluster or sits in its own region of feature space.
 \end{itemize}
 
 
@@ -98,35 +96,27 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 \label{sec:results-baseline}
 
 \subsection{Configuration}
-\begin{itemize}
-    \item Frozen ResNet50 image encoder (general-purpose, ImageNet-pretrained).
-    \item Frozen BERT base (uncased) text encoder.
-    \item Trainable projection heads (256-d shared embedding space) and learnable temperature $\tau$.
-    \item Symmetric InfoNCE loss, AdamW optimiser ($\mathrm{lr}=10^{-3}$, $\mathrm{wd}=10^{-4}$).
-    \item Max 30 epochs, EarlyStopping (patience=5, restore best weights), seed 42.
-    \item Composed prompt format: \texttt{``A histopathology image of \{class\_name\}.''}.
-    \item Stratified 80/10/10 split.
-\end{itemize}
+\label{sec:results-baseline-config}
 
-\subsection{Training behaviour}
-\begin{itemize}
-    \item Training and validation InfoNCE loss converge together; the gap is small, no obvious overfitting visible at the converged epoch.
-    \item Learnable temperature $\tau$ drifts from its CLIP initialisation of $0.07$ toward a smaller converged value, sharpening the cosine-similarity distribution.
-\end{itemize}
-\begin{figure}[ht]
+The baseline pipeline pairs a frozen ResNet50 image encoder, taken from the standard ImageNet-supervised checkpoint, with a frozen BERT-base-uncased text encoder; only a pair of small projection heads --- a single $256$-wide \texttt{Dense} layer with no bias, followed by \texttt{LayerNorm} --- and a scalar temperature $\tau$ are trained on top. This is deliberately the most general-purpose CLIP one can assemble. ResNet50 is the canonical CNN baseline of the past decade and BERT-base is the canonical text encoder; neither has been exposed to histology during pretraining, and neither has been tuned for the task. The reason to start here is mechanical: every subsequent variant in this chapter changes exactly one piece of this configuration, and the resulting delta is only interpretable if the reference is something recognisable rather than something already adapted to the data.
+
+Everything else is held constant across the variants that follow. The training data is the LC25000 dataset, with a $80/10/10$ train--validation--test split at random seed $42$; a single fixed composed prompt, \texttt{``A histopathology image of \{class\_name\}.''}, is used at both training and inference; the loss is symmetric InfoNCE; the optimiser is AdamW with learning rate $1 \times 10^{-3}$ and weight decay $1 \times 10^{-4}$; and training runs for at most $30$ epochs, with EarlyStopping (patience $5$, restore best weights) terminating it earlier on every run. The remaining design choices --- batch size, image and sequence dimensions, initial temperature, gradient clipping, learning-rate schedule, numerical precision, weight initialisation --- are not referenced again in this chapter and are gathered in the baseline hyperparameter table in Methodology (Table~\ref{tab:baseline-hyperparameters}).
+
+\subsection{Training behaviour and in-distribution results}
+\label{sec:results-baseline-training}
+
+On the LC25000 test split, the baseline reaches a macro-F1 of $0.996$. The model has only two trainable projection heads and a scalar temperature $\tau$ on top of frozen encoders --- around $720{,}000$ parameters in total --- so a saturated in-distribution score would invite a memorisation reading without a check on the training dynamics. Figure~\ref{fig:baseline-loss} provides that check: the training and validation InfoNCE losses (equation~\eqref{eq:infonce-sym}) descend together over the $30$-epoch budget and stay close at convergence. The learnable temperature $\tau$ (equation~\eqref{eq:scaled-cosine}), initialised at the CLIP-paper value of $0.07$, \emph{rises} during training, peaks at $\approx 0.090$ around epoch $10$, and settles near $0.087$. This is the opposite direction from the CLIP paper's $\tau \to 0.01$ behaviour on uniquely-paired image--text data, and is consistent with our shared-prompt setup: when multiple images per batch share the same class prompt (the false-negative caveat in §\ref{sec:meth-clip}), softening $\tau$ reduces the penalty those false negatives impose on otherwise-correct alignments.
+
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{../results/plots/baseline_loss.png}
-    \caption{Baseline training (blue) and validation (orange) InfoNCE loss across epochs (left), and learnable temperature $\tau$ (right). The gap between train and validation is the overfit margin --- it remains small here, indicating the projection head + temperature do not over-fit the training set even when the image encoder is frozen.}
+    \caption{Baseline training (blue) and validation (orange) InfoNCE loss across epochs (left), and the learnable temperature $\tau$ on the same horizontal axis (right).}
     \label{fig:baseline-loss}
 \end{figure}
 
-\subsection{Training source results}
-\begin{itemize}
-    \item Macro-F1 on the LC25000 test split: $0.996$ (saturated). In-distribution does not discriminate the trained variants in this study --- the meaningful comparison is the external evaluation in \S\ref{sec:results-baseline-ood}.
-    \item Confusion concentrates on lung\_aca (hardest discrimination); benign tissues and lung\_scc separate cleanly.
-\end{itemize}
+The embedding space the model converges to is shown in Figure~\ref{fig:baseline-umap}. Each LC25000 class forms a distinct cluster of image embeddings and the five class-prompt anchors (encoded through frozen BERT and projected to the same $256$-d space) sit at the centre of their corresponding clusters --- the expected post-InfoNCE alignment between text and image, with the trained projection heads doing the work that the frozen text encoder alone could not. The lung-adenocarcinoma cluster sits closest to lung squamous cell carcinoma in the 2D projection, foreshadowing the off-diagonal confusion-matrix mass discussed below.
 
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     \begin{minipage}[t]{0.48\textwidth}
         \centering
@@ -138,19 +128,26 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
         \includegraphics[width=\textwidth]{../results/plots/baseline_umap_thumbnails.png}
         \par\vspace{2pt}\footnotesize (b) Sample-image thumbnails.
     \end{minipage}
-    \caption{Baseline training-source UMAP. Two views from the same fit: (a) per-class scatter of LC25000 test embeddings with class-prompt anchors marked, (b) the same fit overlaid with sample-image thumbnails. The five class clusters are visible but the class-prompt markers collapse to a near-singular point --- the short-prompt + frozen text encoder degeneracy that persists across every CLIP-style variant in this chapter.}
+    \caption{UMAP of the baseline embedding space on the LC25000 test split. Two views of the same fit: (a) per-class scatter with the five class-prompt anchors marked, (b) the same fit overlaid with sample-image thumbnails.}
     \label{fig:baseline-umap}
 \end{figure}
 
-\begin{figure}[ht]
+The confusion matrix (Figure~\ref{fig:baseline-cm}) confirms that the saturated $0.996$ is genuinely close to ceiling: the benign tissues and lung squamous cell carcinoma separate cleanly, with the off-diagonal mass concentrated on lung adenocarcinoma --- the hardest discrimination in the LC25000 schema. In-distribution, thus, does not discriminate the baseline from any of the trained variants studied in subsequent sections (all of them saturate at $\sim 0.99$); the meaningful comparison is the external evaluation that follows in §\ref{sec:results-baseline-ood}.
+
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{../results/confusion_matrices/baseline_confusion_matrices.png}
-    \caption{Baseline confusion matrix on the LC25000 test split. Left: raw counts. Right: row-normalised by true class. Off-diagonal mass concentrates on lung adenocarcinoma misclassifications.}
+    \caption{Baseline confusion matrix on the LC25000 test split. Left: raw counts. Right: row-normalised by true class.}
     \label{fig:baseline-cm}
 \end{figure}
 
+\FloatBarrier
 \subsection{Generalization to external datasets}
-\begin{table}[ht]
+\label{sec:results-baseline-ood}
+
+The baseline's macro-F1 on each external dataset, restricted-argmax over the target-organ LC25000 classes, is reported in Table~\ref{tab:baseline-ood}. The result splits in two. On the two colon datasets the baseline transfers partially --- $0.866$ on NCT-CRC-HE-7K, the dataset stylistically closest to LC25000's colon distribution, and $0.786$ on Chaoyang, where a different hospital, scanner, and staining protocol drag the score down by $\sim 0.08$ F1 even though the organ is unchanged. On lung the picture is qualitatively different: \textbf{$\mathbf{0.305}$ macro-F1 on LungHist700's 3-class problem, where chance is $\mathbf{0.33}$}. The colon-versus-lung gap dwarfs every within-organ shift in the table --- the central observation the rest of the chapter sets out to explain.
+
+\begin{table}[H]
     \centering
     \small
     \begin{tabular}{|l|c|c|c|c|}
@@ -164,46 +161,37 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
     \label{tab:baseline-ood}
 \end{table}
 
-\begin{itemize}
-    \item \textbf{Colon transfer (NCT + Chaoyang)}: macro-F1 in the $0.79$--$0.87$ range. Best on NCT (closest in style to LC25000's colon distribution); a noticeable drop on Chaoyang despite both being colon (different hospital, different staining, label noise on Chaoyang training split).
-    \item \textbf{Lung result (LungHist700)}: macro-F1 $= 0.305$ on a 3-class problem. Per-class recall: SqC $0.89$, AdC $0.07$, normal $0.19$ --- the model predicts ``squamous'' on $\sim 90$\% of inputs regardless of true class. The baseline does not classify lung tissue on LungHist700; it collapses into a single-class predictor. (The $0.305$ figure is barely above the 3-class chance of $0.33$; this is a near-chance result.)
-    \item \textbf{UMAP signature for the lung collapse} (Figure~\ref{fig:baseline-lung-umap}): all 359 LungHist700 samples land in a single tight cluster in feature space, with no visible internal class structure. The image encoder produces no usable per-class variance on lung tissue from LungHist700.
-\end{itemize}
+The lung results are not a noisy degradation of the colon transfer; they are a different failure mode. Per-class recall on LungHist700 breaks down as $0.89$ for lung squamous cell carcinoma, $0.07$ for lung adenocarcinoma, and $0.19$ for benign lung tissue. Back-calculated from the precision figures, \textbf{the model assigns ``squamous'' to roughly $\mathbf{84}$\% of LungHist700 inputs regardless of true class} --- and given that squamous accounts for only $36$\% of the ground truth, the near-chance macro-F1 is the direct consequence of that bias. Figure~\ref{fig:baseline-lung-umap} shows the matching feature-space signature: all $359$ LungHist700 samples collapse into a single tight cluster with no visible internal class structure. The frozen ImageNet-supervised ResNet50, never exposed to histology during pretraining, extracts no usable per-class variance from LungHist700 tissue, and the trained projection head has nothing to align with the three lung class prompts.
 
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{../results/plots/exp_07_ood_eval/baseline_lunghist700_20x_ood_umap_grid.png}
-    \caption{Baseline cross-distribution UMAP on LungHist700. LC25000 image embeddings (dots) and LungHist700 image embeddings (triangles) projected into the same 2-D fit. LungHist700 samples cluster in a single tight blob with no visible class structure --- the visual signature of a failed feature extractor on this organ.}
+    \caption{Baseline cross-distribution UMAP on LungHist700. LC25000 image embeddings (dots) and LungHist700 image embeddings (triangles) projected into the same 2-D fit.}
     \label{fig:baseline-lung-umap}
 \end{figure}
 
-\begin{figure}[ht]
+The Chaoyang dataset sits between these two regimes (Figure~\ref{fig:baseline-chaoyang-umap}). The two colon classes are partially separated in the projected space, and the Chaoyang triangles cluster in a region adjacent to --- but not co-located with --- the matching LC25000 colon clusters: enough signal for partial transfer, with a measurable cost from the cross-hospital distribution gap. Together with NCT and LungHist700, this exposes two distinct generalisation regimes for the experiments that follow. There is a colon regime, where frozen ImageNet features carry good-enough structure for partial transfer, and a lung regime, where they carry no usable structure at all. The central question the rest of this chapter is built around: is the lung-side failure about the encoder's architecture, about its supervised pretraining on natural images, or about the absence of histopathology data in pretraining? The DINOv2 control (general-domain self-supervised pretraining, no histology) and the PLIP backbone (ViT pretrained on histopathology image--text pairs) jointly decompose that question, and the headline answer arrives in §\ref{sec:results-image-encoder}.
+
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{../results/plots/exp_07_ood_eval/baseline_chaoyang_ood_umap_grid.png}
-    \caption{Baseline cross-distribution UMAP on Chaoyang. The 2 colon classes are partially separated; Chaoyang triangles sit in their own region adjacent to but not co-located with the matching LC25000 colon clusters.}
+    \caption{Baseline cross-distribution UMAP on Chaoyang. LC25000 image embeddings (dots) and Chaoyang image embeddings (triangles) projected into the same 2-D fit.}
     \label{fig:baseline-chaoyang-umap}
 \end{figure}
 
-\subsection{What we learned}
-\begin{itemize}
-    \item Baseline transfers \emph{partially} to colon external data (NCT, Chaoyang), losing $\sim 8$ F1 between close-shift (NCT) and different-hospital (Chaoyang).
-    \item Baseline does \emph{not} classify lung tissue on LungHist700 --- the model collapses to a degenerate single-class predictor on the lung organ. This is a structural failure of the feature extractor, not a statistical fluctuation.
-    \item Sets up the central question of Section~\ref{sec:results-image-encoder}: is the lung-side failure about the architecture, about the supervised pretraining on natural images, or about the lack of histopathology data in pretraining?
-\end{itemize}
-
 
 % ============================================================
+\FloatBarrier
 \section{Stain normalization}
 \label{sec:results-stain}
 
 \subsection{Configuration}
-\begin{itemize}
-    \item Frozen ResNet50 image encoder, frozen BERT text encoder, projection head, symmetric InfoNCE --- identical to the baseline (Section~\ref{sec:results-baseline}). Only the image inputs change.
-    \item \textbf{Method}: Macenko normalization, fit on a single reference patch and applied deterministically to every training and evaluation image. The reference is the first NORM tile from NCT-CRC-HE-7K (``NCT-NORM''), chosen so LC25000 lands in approximately the same stain space NCT arrives in --- which lets us feed NCT raw at evaluation without a second Macenko pass.
-    \item At external evaluation time, Chaoyang and LungHist700 patches (native stain at release) are passed through the same Macenko(NCT-NORM) transform so they land in the model's training-stain space. NCT-CRC patches are fed raw (already approximately in that space at release).
-    \item Inputs are cached on Drive after one-time normalization so re-runs of the downstream model are cheap.
-    \item Reinhard and Vahadane were also explored as alternative normalizations in an exploratory pass but did not progress to the full external-evaluation ablation: Vahadane's NMF solver fails to converge on a fraction of LC25000 patches (visible in Figure~\ref{fig:stain-before-after}(d)) and Reinhard is a Lab-space colour-statistics transfer rather than a stain-decomposition method, included in the figure for visual comparison only.
-\end{itemize}
+
+The stain-normalisation experiment keeps the baseline pipeline architecture identical to §\ref{sec:results-baseline-config} and changes only the image-input distribution. Every LC25000 training image is Macenko-normalised~\cite{macenko2009stain} against a single fixed reference patch: the first \texttt{NORM} tile from NCT-CRC-HE-7K, abbreviated ``NCT-NORM'' below.
+
+The choice of reference matters operationally. NCT-CRC is distributed already Macenko-normalised against an unpublished Kather-team reference~\cite{kather2019nct}; by Macenko-normalising LC25000 onto an NCT-CRC tile, we land the training distribution in approximately the colour space NCT-CRC arrives in at release, which lets NCT-CRC be fed raw at evaluation and avoids the double-Macenko regime that historically zeroed out the OOD F1 in an earlier version of this experiment. Chaoyang and LungHist700, by contrast, arrive in their native un-normalised palettes, so for those two datasets the same Macenko(NCT-NORM) transform is applied at inference to bring them into the model's training-stain space. An alternative reference drawn from Chaoyang or LungHist700 --- the latter being the most stain-distinct of the three external datasets --- would have re-introduced the double-Macenko problem on NCT-CRC and required a separate retraining run for each reference tested; the NCT-NORM reference is therefore picked for methodological consistency rather than per-dataset optimisation, and reference rotation as an ablation axis is documented as a limitation in Chapter~\ref{chp:conclusion}.
+
+Reinhard and Vahadane were also explored as alternative normalisations in an exploratory pass but did not advance to the full external-evaluation ablation. Vahadane's NMF solver fails to converge on a fraction of LC25000 patches --- visible in Figure~\ref{fig:stain-before-after}(d), where the bottom-row \texttt{colon\_aca} cell re-renders near-blank. Reinhard is a Lab-space colour-statistics transfer rather than a stain-decomposition method, included in the figure for visual comparison only.
 
 \begin{figure}[ht]
     \centering
@@ -231,17 +219,11 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
     \label{fig:stain-before-after}
 \end{figure}
 
-\subsection{Training source results}
-\begin{itemize}
-    \item Macro-F1 on LC25000 with Macenko(NCT-NORM) at training: $0.986$, saturated alongside baseline. In-distribution does not discriminate this lever (or any other trained variant in this study).
-\end{itemize}
-
 \subsection{Generalization to external datasets}
-\begin{itemize}
-    \item Three-dataset external evaluation with the Macenko(NCT-NORM) checkpoint, restricted argmax per dataset:
-\end{itemize}
 
-\begin{table}[ht]
+On LC25000 the Macenko-trained checkpoint saturates at $0.986$ macro-F1, alongside the baseline and every other trained variant in this study --- in-distribution does not discriminate this lever, so the substantive comparison is the external evaluation reported in Table~\ref{tab:stain-3way}.
+
+\begin{table}[H]
     \centering
     \small
     \begin{tabular}{|l|c|c|c|}
@@ -249,24 +231,15 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
     \textbf{External dataset} & \textbf{Baseline F1} & \textbf{Macenko F1} & \textbf{Delta} \\ \hline
     NCT-CRC-HE-7K (close-shift colon)         & $0.866$ & $0.844$ & $-0.022$ \\ \hline
     Chaoyang (different-hospital colon)       & $0.786$ & $0.816$ & $+0.030$ \\ \hline
-    LungHist700 (different-organ lung, 20$\times$)  & $0.305$ & $0.325$ & $+0.020$ \\ \hline
+    LungHist700 (different-source lung, 20$\times$)  & $0.305$ & $0.325$ & $+0.020$ \\ \hline
     \end{tabular}
-    \caption{Macenko(NCT-NORM) vs baseline on the three external evaluation datasets. Macenko helps where the OOD patches arrive in their native stain palette (Chaoyang, LungHist700) and regresses on NCT, which arrives already Macenko-normalised at release.}
+    \caption{Macenko(NCT-NORM) vs baseline on the three external evaluation datasets.}
     \label{tab:stain-3way}
 \end{table}
 
-\begin{itemize}
-    \item \textbf{The lever's direction is data-dependent}: it \emph{helps} on the two datasets that arrive in their native stain space (Chaoyang $+0.030$ F1, LungHist700 $+0.020$ F1, both receiving Macenko at inference to land in the training-stain space); it \emph{regresses} on NCT-CRC ($-0.022$ F1), the only dataset that was already partially Macenko-normalised at release.
-    \item Mechanism: when the OOD input genuinely sits in a different stain palette than training, Macenko at inference moves it closer to the model's training distribution and the frozen backbone produces better features. When the input is already in (approximately) the target stain space, applying Macenko at training added a non-linear input-statistic shift that the frozen backbone could not absorb, and the eval-time pass-through cannot recover the small cost paid.
-    \item \textbf{Magnitude is modest}. The $+0.020$--$+0.030$ F1 gains on Chaoyang and LungHist700 are real but small. By comparison, swapping the image encoder to PLIP (Section~\ref{sec:results-image-encoder}) gains $+0.027$ on Chaoyang (comparable to Macenko) but $+0.335$ on LungHist700 (an order of magnitude larger). Stain normalization is not the dominant lever even where it helps.
-\end{itemize}
+\textbf{The lever's direction is data-dependent.} On the two datasets that arrive in their native stain palette --- Chaoyang ($+0.030$ F1) and LungHist700 ($+0.020$ F1), both receiving Macenko at inference --- normalisation moves the input closer to the model's training distribution and the frozen ImageNet ResNet50 produces better features. On NCT-CRC the picture inverts: NCT was already in approximately the target stain space at release, so training-time Macenko introduced a non-linear shift the frozen backbone could not absorb, and the eval-time pass-through cannot recover the small cost paid ($-0.022$ F1).
 
-\subsection{What we learned}
-\begin{itemize}
-    \item Stain normalization's effect under shift is \emph{data-dependent}. It transfers where it normalizes away genuine native-stain differences, and regresses where the input was already in the target stain space (here, NCT-CRC's release-time Macenko-normalised state).
-    \item Once you commit to Macenko at training time, the right protocol is to apply the same Macenko at evaluation time \emph{only} on OOD inputs that do not arrive in the target stain space already. Doubling normalization on a pre-normalised target is what historically broke the OOD F1 entirely (the ``double-Macenko'' regime we surfaced earlier in the project).
-    \item Methodologically: stain normalization is a real, low-cost lever for cross-laboratory histopathology pipelines, but at the frozen-backbone scale evaluated here its gain is dominated by image-encoder pretraining choice on the same datasets.
-\end{itemize}
+The magnitude is modest, even where the lever helps. The $+0.020$--$+0.030$ F1 gains on Chaoyang and LungHist700 are real but small; by comparison, swapping the image encoder to PLIP (§\ref{sec:results-image-encoder}) gains $+0.027$ on Chaoyang and \textbf{$\mathbf{+0.335}$ on LungHist700 --- an order of magnitude larger}. At the frozen-backbone scale evaluated here, stain normalisation is a useful but not dominant lever, and the protocol lesson worth carrying forward is the asymmetric application: Macenko is applied at inference only on inputs that arrive in their native stain palette, since doubling on a pre-normalised target is what historically broke the OOD F1 in this experiment.
 
 
 % ============================================================
@@ -380,7 +353,7 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 \subsection{What we learned}
 \begin{itemize}
     \item CLIP and plain CE are \emph{interchangeable on easy distributions}; the choice of architecture is invisible when the model is evaluated on its training distribution.
-    \item CLIP's edge appears \emph{under shift severity and grows with it}: $-0.014$ F1 on close-shift NCT (plain ahead), $+0.064$ on different-hospital Chaoyang (CLIP ahead), $+0.024$ on different-organ LungHist700.
+    \item CLIP's edge appears \emph{under shift severity and grows with it}: $-0.014$ F1 on close-shift NCT (plain ahead), $+0.064$ on different-hospital Chaoyang (CLIP ahead), $+0.024$ on different-source LungHist700.
     \item \textbf{Mechanism}: same image encoder, same image features. The difference is the classifier geometry. The plain CE softmax learns class \emph{direction vectors} in feature space and is trained to maximise the logit margin; on shifted data those vectors don't move but the inputs sit in different regions, and the high-confidence softmax collapses into a single-class predictor. CLIP uses cosine similarity to class-prompt embeddings in an L2-normalized 256-d projection space, scaled by a learned temperature. Three effects make this geometry more robust:
     \begin{itemize}
         \item Cosine similarity is bounded in $[-1, 1]$ --- no unbounded margin for the model to over-extrapolate.
@@ -447,7 +420,7 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
     \textbf{External dataset} & \textbf{Baseline F1} & \textbf{PubMedBERT+name\_only F1} & \textbf{Delta} \\ \hline
     NCT-CRC-HE-7K (close-shift colon)               & $0.866$ & $0.855$ & $-0.011$ \\ \hline
     Chaoyang (different-hospital colon)             & $0.786$ & $0.795$ & $+0.009$ \\ \hline
-    LungHist700 (different-organ lung, 20$\times$)  & $0.305$ & $0.279$ & $-0.026$ \\ \hline
+    LungHist700 (different-source lung, 20$\times$)  & $0.305$ & $0.279$ & $-0.026$ \\ \hline
     \end{tabular}
     \caption{Best biomedical text-encoder cell (PubMedBERT + name\_only) vs baseline on the three external evaluation datasets. The biomedical text encoder ties baseline on Chaoyang (within noise) and regresses on both NCT and LungHist700. No measurable transfer benefit on any of the three datasets.}
     \label{tab:text-encoder-3way}
@@ -512,7 +485,7 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 \begin{itemize}
     \item \textbf{NCT-CRC (close-shift colon)}: PLIP wins by $+0.067$ F1 over the ResNet50 baseline. DINOv2 lands at $-0.011$ vs baseline --- general-domain self-supervision does \emph{not} help on the easiest external dataset. The colon ceiling around $0.88$ that none of the other interventions could clear is broken specifically by changing the image encoder's pretraining \emph{domain}, not by architecture or self-supervision alone.
     \item \textbf{Chaoyang (different-hospital colon)}: PLIP wins by $+0.027$ F1; DINOv2 lands at $-0.010$ vs baseline. Same colon-side pattern as NCT: only histopathology pretraining helps; general SSL is interchangeable with ImageNet supervision.
-    \item \textbf{LungHist700 (different-organ lung)}: this is where the control pays off. PLIP wins by $+0.335$ F1 over baseline; DINOv2 wins by $+0.152$ F1. \emph{Roughly half of PLIP's lung advantage comes from architecture + self-supervised pretraining on general images; the other half comes from histopathology pretraining specifically.} DINOv2 partially rescues the lung collapse (per-class recall $0.46/0.52/0.40$, balanced) but does not match PLIP's full functional classifier ($0.51/0.49/0.91$).
+    \item \textbf{LungHist700 (different-source lung)}: this is where the control pays off. PLIP wins by $+0.335$ F1 over baseline; DINOv2 wins by $+0.152$ F1. \emph{Roughly half of PLIP's lung advantage comes from architecture + self-supervised pretraining on general images; the other half comes from histopathology pretraining specifically.} DINOv2 partially rescues the lung collapse (per-class recall $0.46/0.52/0.40$, balanced) but does not match PLIP's full functional classifier ($0.51/0.49/0.91$).
 \end{itemize}
 
 \noindent\textbf{Per-class signature on LungHist700.} Both ResNet50 variants converge to the same degenerate predictor on lung tissue: baseline recall $0.19/0.07/0.89$ for normal/AdC/SqC, plain CE $0.15/0.05/0.91$ --- both predict ``squamous'' on $\sim 90$\% of inputs regardless of true class. \textbf{DINOv2-encoded variant: $0.46/0.52/0.40$} --- balanced across all 3 classes, no degenerate collapse, but lower peak per-class scores than PLIP. \textbf{PLIP-encoded variant: $0.51/0.49/0.91$} --- balanced \emph{and} retains the high squamous recall, the only variant that does both.
@@ -536,7 +509,7 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 \subsection{What we learned}
 \begin{itemize}
     \item The \textbf{image encoder's pretraining is the dominant lever in this study}, but the DINOv2 control reveals that ``pretraining'' decomposes into two contributing components.
-    \item Effect-size summary: PLIP gains over baseline by $+0.067$ F1 on close-shift colon, $+0.027$ on different-hospital colon, \textbf{$+0.335$ on different-organ lung}. DINOv2 gains over baseline by $-0.011$ / $-0.010$ / $+0.152$ on the same three datasets.
+    \item Effect-size summary: PLIP gains over baseline by $+0.067$ F1 on close-shift colon, $+0.027$ on different-hospital colon, \textbf{$+0.335$ on different-source lung}. DINOv2 gains over baseline by $-0.011$ / $-0.010$ / $+0.152$ on the same three datasets.
     \item \textbf{On colon (NCT, Chaoyang)}: only histopathology pretraining moves the needle. General-domain self-supervised pretraining (DINOv2) lands within noise of ResNet50 supervised pretraining on natural images. The colon advantage is specifically about \emph{what} the encoder was pretrained on, not \emph{how}.
     \item \textbf{On lung (LungHist700)}: the DINOv2 and PLIP-zero-shot controls together yield a clean three-step decomposition of PLIP-backbone's $+0.335$ F1 gap. Baseline at $0.305$ $\to$ DINOv2 at $0.457$ ($+0.152$, ``ViT $+$ general-domain SSL'' contribution) $\to$ PLIP zero-shot at $0.544$ ($+0.087$, ``histopathology pretraining without LC25000 supervision'' contribution) $\to$ PLIP-backbone at $0.640$ ($+0.096$, ``LC25000 supervision on top of histopathology pretraining'' contribution). Three roughly comparable steps of $\sim 0.1$ F1 each, sequentially adding architecture/SSL, then domain, then task supervision.
     \item Why colon and lung behave differently, on the ResNet50 baseline: ImageNet supervision contains no histology. LC25000 supervision rescues ResNet50 features that happen to correlate with colon class labels in the LC25000 training distribution. That correlation transfers partially to NCT/Chaoyang (both colon, stylistically close). It does not transfer to lung tissue at all --- the lung-side ``success'' in-distribution is memorisation on the LC25000 lung subset, not learned lung tissue features.
@@ -552,7 +525,7 @@ Image encoder (\S\ref{sec:results-image-encoder}) & ViT-B/32 (PLIP); ViT-B/14 (D
 \subsection{Synthesis across experiments}
 \begin{itemize}
     \item This chapter evaluated six interventions on a frozen general-purpose CLIP pipeline (ResNet50 + BERT). Five of the six (stain normalization, biomedical text encoders, plain-classifier substitution, the prompt-format variations within the text-encoder ablation) produce changes within $\sim 0.03$ F1 of the baseline on close-shift external evaluation (NCT) and at most $\sim 0.03$ F1 of improvement on the harder external datasets. Stain Macenko is the only input-side lever that moves the needle positively under shift ($+0.030$ on Chaoyang, $+0.020$ on LungHist700), but its magnitude is dominated by the image-encoder lever on the same datasets. The best biomedical text-encoder cell (PubMedBERT + name\_only) confirms the null result across all 3 external datasets --- ties baseline on Chaoyang, regresses on NCT and LungHist700.
-    \item The sixth intervention --- replacing the image encoder's pretraining (Section~\ref{sec:results-image-encoder}) --- moves the headline metric by $+0.067$ on close-shift colon (NCT), $+0.027$ on different-hospital colon (Chaoyang), and \textbf{$+0.335$ on different-organ lung (LungHist700)}, taking the lung result from a degenerate single-class predictor at $0.305$ to a functional 3-class classifier at $0.640$.
+    \item The sixth intervention --- replacing the image encoder's pretraining (Section~\ref{sec:results-image-encoder}) --- moves the headline metric by $+0.067$ on close-shift colon (NCT), $+0.027$ on different-hospital colon (Chaoyang), and \textbf{$+0.335$ on different-source lung (LungHist700)}, taking the lung result from a degenerate single-class predictor at $0.305$ to a functional 3-class classifier at $0.640$.
     \item The DINOv2 and PLIP-zero-shot controls together decompose that gain on lung into a clean ladder: $0.305$ (baseline) $\to$ $0.457$ (DINOv2: ViT $+$ SSL contribution, $+0.152$) $\to$ $0.544$ (PLIP zero-shot: histopath pretraining contribution, $+0.087$) $\to$ $0.640$ (PLIP-backbone: LC25000 supervision on top, $+0.096$). Three roughly equal steps of $\sim 0.1$ F1. On colon, the decomposition collapses --- DINOv2 ties baseline and PLIP zero-shot actually falls below baseline on Chaoyang ($0.731$ vs $0.786$) because LC25000 supervision was already enough.
     \item \textbf{The image encoder's pretraining is the dominant lever}, by roughly $5\times$ over the next-largest single lever on colon external evaluation. On lung, no head/loss/text-side intervention rescues a non-functional predictor at all; only changing the encoder does.
     \item The contemporary methods literature's emphasis on novel loss functions, text-side innovations, and stain harmonisation is not supported by this study at the frozen-backbone scale we evaluated.

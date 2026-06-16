@@ -18,6 +18,14 @@
 %:Paquete para incorporar aspectos concretos de la edición
 \usepackage{edicionPFC}
 
+%:Float fencing -- prevents figures from drifting into the wrong section
+\usepackage{placeins}
+%:Float [H] specifier -- forces figures to render in place (no floating)
+\usepackage{float}
+
+%:Push leftover vertical space to the bottom margin (no inter-element stretching)
+\raggedbottom
+
 
 %:Estas líneas de código son INNECESARIAS excepto para mostrar determinadas características en este manual. Pueden eliminarse o comentarse sin ningún problema.
 %Se usan para compilar el capítulo estilolibroetsi.tex
@@ -91,6 +99,7 @@ twoside}
 \setenumerate[3]{label=\normalfont\bfseries{\roman*.}, leftmargin=*}
 \setlist{itemsep=.1em}
 \setlength{\parindent}{1.0 em}
+\setlength{\parskip}{0.4\baselineskip plus 0.1\baselineskip minus 0.05\baselineskip}
 
 \setcounter{tocdepth}{4}						% El nivel hasta el que se muestra el índice 
 

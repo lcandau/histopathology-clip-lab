@@ -4,7 +4,7 @@
 \section{Conclusions}
 \label{sec:concl-conclusions}
 
-\noindent\textbf{Headline.} The image encoder's pretraining is the dominant lever in this study. Holding everything else fixed, swapping the general-purpose ResNet50 (ImageNet supervised) for PLIP's pretrained ViT-B/32 (histopathology image--text contrastive) improves external evaluation by $+0.067$ F1 on close-shift colon (NCT-CRC), $+0.027$ on different-hospital colon (Chaoyang), and $+0.335$ on different-organ lung (LungHist700). None of the other five interventions tested moves the needle comparably. The DINOv2 control reveals that roughly half of PLIP's lung advantage comes from architecture + self-supervised pretraining alone, the other half from histopathology pretraining specifically.
+\noindent\textbf{Headline.} The image encoder's pretraining is the dominant lever in this study. Holding everything else fixed, swapping the general-purpose ResNet50 (ImageNet supervised) for PLIP's pretrained ViT-B/32 (histopathology image--text contrastive) improves external evaluation by $+0.067$ F1 on close-shift colon (NCT-CRC), $+0.027$ on different-hospital colon (Chaoyang), and $+0.335$ on different-source lung (LungHist700). None of the other five interventions tested moves the needle comparably. The DINOv2 control reveals that roughly half of PLIP's lung advantage comes from architecture + self-supervised pretraining alone, the other half from histopathology pretraining specifically.
 
 \subsection*{RQ1 --- Baseline behavior and failure modes}
 \begin{itemize}

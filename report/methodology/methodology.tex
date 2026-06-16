@@ -35,12 +35,33 @@
 
 \subsection{Architecture and training signal}
 \begin{itemize}
-    \item Dual-encoder + shared embedding space.
-    \item InfoNCE loss, learnable temperature.
-    \item In-batch false-negative regime at small batch + few classes.
-    \item Prompt-based zero-shot classification.
-    \item CLIP-paper sample-level retrieval $\to$ doesn't apply (class-shared prompts).
+    \item Dual-encoder, shared $d$-dimensional embedding space ($d = 256$ throughout this thesis).
+    \item Symmetric InfoNCE loss with a learnable temperature $\tau$ (formal definition below).
+    \item In-batch false-negative regime at small batch + few classes (discussed under \emph{Caveats} below).
+    \item Prompt-based zero-shot classification at inference: an image is classified by argmax of cosine similarity against the encoded class prompts.
+    \item CLIP-paper sample-level retrieval $\to$ doesn't apply to our setup: every image in a class shares the same prompt, so retrieval would measure class assignment rather than sample identification.
 \end{itemize}
+
+\noindent\textbf{InfoNCE loss.} For a batch of $N$ matched image--text pairs $\{(I_i, T_i)\}_{i=1}^{N}$, the model embeds each side into the shared $d$-dimensional space and produces two L2-normalised batches of embeddings, $\{\mathbf{v}_i\}$ and $\{\mathbf{t}_i\}$. Define the scaled cosine similarity between image $i$ and prompt $j$ as
+\begin{equation}
+s_{ij} \;=\; \frac{\mathbf{v}_i \cdot \mathbf{t}_j}{\tau},
+\label{eq:scaled-cosine}
+\end{equation}
+where $\tau$ is the learnable temperature introduced below. For each image $i$ the image-to-text contrastive loss treats the matched prompt $i$ as the positive and the other $N{-}1$ prompts in the same batch as negatives; the row-wise softmax cross-entropy then reads
+\begin{equation}
+\mathcal{L}_{I \to T} \;=\; -\frac{1}{N} \sum_{i=1}^{N} \log \frac{\exp(s_{ii})}{\sum_{j=1}^{N} \exp(s_{ij})}.
+\label{eq:infonce-i2t}
+\end{equation}
+The symmetric InfoNCE loss~\cite{oord2018cpc,radford2021clip} averages this with the analogous column-wise text-to-image loss $\mathcal{L}_{T \to I}$ (in which each prompt is matched against its image positive and the $N{-}1$ batch images as negatives):
+\begin{equation}
+\mathcal{L}_{\text{InfoNCE}} \;=\; \tfrac{1}{2} \left( \mathcal{L}_{I \to T} + \mathcal{L}_{T \to I} \right).
+\label{eq:infonce-sym}
+\end{equation}
+Geometrically, minimising $\mathcal{L}_{\text{InfoNCE}}$ pulls matched (image, prompt) pairs together in cosine-similarity space and pushes the $N{-}1$ batch-internal mismatches apart.
+
+\noindent\textbf{Learnable temperature.} The scalar $\tau$ in equation~\eqref{eq:scaled-cosine} controls the sharpness of the softmax in equation~\eqref{eq:infonce-i2t}: a smaller $\tau$ peaks the distribution and pushes the model toward sharply confident positives, while a larger $\tau$ smooths it. Following CLIP~\cite{radford2021clip} we store $\log(1/\tau)$ as the trainable variable (which guarantees $\tau > 0$ throughout training without an explicit constraint) and initialise it to $\log(1/0.07) \approx 2.66$, the CLIP-paper default. Gradient descent moves it freely during training. Empirically $\log(1/\tau)$ drifts upward (i.e.\ $\tau$ shrinks) as the embedding space stabilises, reflecting the model's preference for sharper positives as the contrastive task becomes easier; the converged value is reported alongside the loss curves in Chapter~\ref{results}.
+
+\noindent\textbf{Caveats.} The InfoNCE objective above assumes the $N{-}1$ in-batch negatives are \emph{genuine} mismatches. With our 5-class LC25000 supervision and batch size $N{=}32$ (Table~\ref{tab:baseline-hyperparameters}), the expected number of true mismatches per image is $0.8 \times (N{-}1) \approx 24.8$ but the expected number of \emph{false negatives} (other batch entries sharing the image's class, and therefore its prompt) is $\sim 6$. The loss therefore penalises some semantically-correct alignments. We do not mitigate this in the present study --- it is documented as a limitation in Chapter~\ref{chp:conclusion}.
 
 Figure~\ref{fig:clip-paradigm} reproduces the canonical CLIP paradigm as introduced by Radford et al.~\cite{radford2021clip}: contrastive image--text pretraining (panel 1) builds a shared embedding space; class prompts then become the zero-shot classifier (panels 2--3). Figure~\ref{fig:clip-architecture} is the specific instantiation of that paradigm used in this thesis --- short histopathology class prompts, $256$-d projection heads on top of frozen foundation-model encoders, and a single fixed prompt strategy used at both training and evaluation time.
 
@@ -278,7 +299,7 @@ Figure~\ref{fig:clip-paradigm} reproduces the canonical CLIP paradigm as introdu
 \begin{itemize}
     \item Tabatabaei et al.~\cite{tabatabaei2024lunghist} (2024, \emph{Scientific Data}).
     \item $\sim$691 high-resolution images at 20$\times$ and 40$\times$ covering normal lung tissue plus adenocarcinoma and squamous-cell carcinoma at three differentiation grades each; we restrict to the 20$\times$ subset for 3-class scoring (359 images: 85 normal $+$ 146 AdC $+$ 128 SqC).
-    \item Role: different-organ lung evaluation; the only multi-class scoring among the external datasets.
+    \item Role: different-source lung evaluation; the only multi-class scoring among the external datasets.
 \end{itemize}
 
 
@@ -397,7 +418,7 @@ Figure~\ref{fig:clip-paradigm} reproduces the canonical CLIP paradigm as introdu
 \label{sec:meth-design}
 \begin{itemize}
     \item Single-variable-change principle.
-    \item Matrix grouped by axis of variation; full matrix in §\ref{sec:experiment-matrix}.
+    \item Matrix grouped by axis of variation; full matrix in Table~\ref{tab:experiment-matrix} of Chapter~\ref{results}.
     \item Scope boundaries: no patient-level grouping, no human-expert evaluation, no architecture-controlled comparison vs CONCH~\cite{lu2024conch} $/$ BiomedCLIP~\cite{zhang2023biomedclip} $/$ MUSK~\cite{xiang2025musk}. Deferred to future work.
 \end{itemize}
 
