@@ -1,5 +1,5 @@
 % !TEX root =../tfmETSI.tex
-\chapter{Results and Discussion}\label{results}
+\chapter{Results and Discussion}\label{chp:results}
 
 % =====================================================================
 %  Pass D (2026-06-07) -- second review pass folding in the user's
@@ -191,7 +191,7 @@ The stain-normalisation experiment keeps the baseline pipeline architecture iden
 
 The choice of reference matters operationally. NCT-CRC is distributed already Macenko-normalised against an unpublished Kather-team reference~\cite{kather2019nct}; by Macenko-normalising LC25000 onto an NCT-CRC tile, we land the training distribution in approximately the colour space NCT-CRC arrives in at release, which lets NCT-CRC be fed raw at evaluation and avoids the double-Macenko regime that historically zeroed out the OOD F1 in an earlier version of this experiment. Chaoyang and LungHist700, by contrast, arrive in their native un-normalised palettes, so for those two datasets the same Macenko(NCT-NORM) transform is applied at inference to bring them into the model's training-stain space. An alternative reference drawn from Chaoyang or LungHist700 --- the latter being the most stain-distinct of the three external datasets --- would have re-introduced the double-Macenko problem on NCT-CRC and required a separate retraining run for each reference tested; the NCT-NORM reference is therefore picked for methodological consistency rather than per-dataset optimisation, and reference rotation as an ablation axis is documented as a limitation in Chapter~\ref{chp:conclusion}.
 
-Reinhard and Vahadane were also explored as alternative normalisations in an exploratory pass but did not advance to the full external-evaluation ablation. Vahadane's NMF solver fails to converge on a fraction of LC25000 patches --- visible in Figure~\ref{fig:stain-before-after}(d), where the bottom-row \texttt{colon\_aca} cell re-renders near-blank. Reinhard is a Lab-space colour-statistics transfer rather than a stain-decomposition method, included in the figure for visual comparison only.
+Reinhard and Vahadane were also explored as alternative normalisations in an exploratory pass but did not advance to the full external-evaluation comparison. Vahadane's NMF solver fails to converge on a fraction of LC25000 patches --- visible in Figure~\ref{fig:stain-before-after}(d), where the bottom-row \texttt{colon\_aca} cell re-renders near-blank. Reinhard is a Lab-space colour-statistics transfer rather than a stain-decomposition method, included in the figure for visual comparison only. The setup decisions for the three methods are described in §\ref{sec:meth-stain}.
 
 \begin{figure}[ht]
     \centering
@@ -215,7 +215,7 @@ Reinhard and Vahadane were also explored as alternative normalisations in an exp
         \includegraphics[width=\textwidth]{../results/plots/stain_vahadane_normalized_only.png}
         \par\vspace{2pt}\footnotesize (d) Vahadane.
     \end{minipage}
-    \caption{Stain normalization, one example per class. Column (a) shows the raw inputs (identical across methods, shown once for compactness); columns (b)--(d) show the same inputs after Macenko, Reinhard, and Vahadane normalization respectively. The bottom-row colon\_aca cell in column (d) shows the Vahadane NMF solver failing to converge and re-rendering near-blank, an instability discussed in the interpretation.}
+    \caption{Stain normalization, one LC25000 example per class. Column (a) shows the raw inputs (identical across methods, shown once for compactness); columns (b)--(d) show the same inputs after Macenko, Reinhard, and Vahadane normalization respectively. The bottom-row \texttt{colon\_aca} cell in column (d) shows the Vahadane NMF solver failing to converge and re-rendering near-blank.}
     \label{fig:stain-before-after}
 \end{figure}
 
@@ -395,6 +395,13 @@ The first sweep crosses all six cells against the closest external dataset, NCT-
     \caption{6-cell biomedical text encoder ablation, macro-F1 on NCT-CRC. The BERT + composed cell is essentially baseline (same architecture, same prompt template); the best \emph{biomedical} cell --- PubMedBERT + name\_only at $0.855$ --- still trails baseline by $-0.011$ F1.}
     \label{tab:text-encoder}
 \end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{../results/plots/exp_07_ood_eval/biomed_ood_umap_grid.png}
+    \caption{6-cell UMAP grid (one panel per BERT / BioBERT / PubMedBERT $\times$ name\_only / composed combination) showing the cross-distribution view on NCT-CRC. Cluster geometry is qualitatively similar across all six cells, consistent with the lack of meaningful F1 separation in Table~\ref{tab:text-encoder}.}
+    \label{fig:biomed-umap}
+\end{figure}
 
 Three converging reasons explain why biomedical text pretraining doesn't translate into a measurable advantage here. First, the projection head absorbs encoder-specific differences. BERT, BioBERT, and PubMedBERT all start from different 768-d embedding spaces, but all three get pulled through the same trainable projection head onto LC25000's five class anchors --- with only five classes to separate, that head learns to map any reasonable starting embedding onto useful anchors, washing out the encoder differences in the process. Second, short class-name prompts don't expose biomedical-vocabulary richness. Strings like \texttt{``colon adenocarcinoma''} tokenise into 2--3 wordpieces that any BERT-family model handles competently; biomedical pretraining adds value most where domain vocabulary is dense (clinical notes, paper abstracts, multi-sentence text), and the prompts here aren't dense at all. Third, \textbf{CLIP's robustness under shift is geometric, not knowledge-driven} --- the cosine + L2-norm + temperature classifier established in §\ref{sec:results-foundational-vs-plain} is independent of which text encoder produces the prompt embeddings. A different encoder just moves the starting positions of the anchors; the projection head re-maps them anyway, and the geometry that protects against shift stays the same.
 

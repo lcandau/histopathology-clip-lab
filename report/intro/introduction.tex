@@ -39,9 +39,9 @@
 \section{Contributions}
 \label{sec:intro-contributions}
 
-The central contribution of this project is a controlled measurement of how much each major design choice in a CLIP-style histopathology pipeline actually matters, with every claim framed as a delta over the same baseline --- frozen ResNet50 + frozen BERT, single fixed prompt, stratified 80/10/10 split on LC25000 --- and iterated through one experiment at a time in Chapter~\ref{results}.
+The central contribution of this project is a controlled measurement of how much each major design choice in a CLIP-style histopathology pipeline actually matters, with every claim framed as a delta over the same baseline --- frozen ResNet50 + frozen BERT, single fixed prompt, stratified 80/10/10 split on LC25000 --- and iterated through one experiment at a time in Chapter~\ref{chp:results}.
 
-Headline findings (full results in Chapter~\ref{results}):
+Headline findings (full results in Chapter~\ref{chp:results}):
 \begin{itemize}
     \item \textbf{Image encoder pretraining is the dominant lever.} Replacing ResNet50 with PLIP's pretrained ViT-B/32 (histopathology image--text contrastive) gains $+0.067$ F1 on close-shift colon (NCT-CRC), $+0.027$ on different-hospital colon (Chaoyang), and $+0.335$ on different-source lung (LungHist700). No other intervention tested moves the needle comparably.
     \item \textbf{The lung-side advantage decomposes evenly.} The DINOv2 control (same general ViT architecture family as PLIP, self-supervised on general natural images, no histopathology data) lifts LungHist700 by $+0.152$ over baseline --- about half of PLIP's $+0.335$ gap. The other half is attributable to histopathology pretraining specifically.
@@ -64,6 +64,6 @@ Methodological contributions:
     \item Chapter~\ref{chp:introduction} (Introduction) --- motivation, scope, research questions, contributions.
     \item Chapter~\ref{chp:stateofart} (State of the Art) --- foundation models, multimodal contrastive lineage, pathology FMs, where this thesis fits.
     \item Chapter~\ref{chp:methodology} (Methodology) --- CLIP architecture, image and text encoders, datasets, preprocessing, baseline, evaluation protocol, reproducibility.
-    \item Chapter~\ref{results} (Results and Discussion) --- the experiments and what each measured, ending in a synthesis section.
+    \item Chapter~\ref{chp:results} (Results and Discussion) --- the experiments and what each measured, ending in a synthesis section.
     \item Chapter~\ref{chp:conclusion} (Conclusions and Future Work) --- one-paragraph-per-RQ conclusions, limitations, future work.
 \end{itemize}
