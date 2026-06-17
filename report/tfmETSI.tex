@@ -74,14 +74,12 @@
 %	\markboth{#1}{#1}}
 %\addbibresource{bibliografiaLibroETSI.bib}
 
-% Ejemplo de Glosario
-\newacronym[type=main]{ETSI}{ETSI}{Escuela Técnica Superior de Ingeniería}
-\newacronym[type=main]{US}{US}{Universidad de Sevilla}
-\newacronym[type=main]{DMC}{DMC}{Canal Discreto sin Memoria}
-
-
-\makeindex
-\makeglossaries %Si no se quiere el glosario, comentar esta línea.
+% Index and Glossary are unused in this TFM — disabled so the TOC does not
+% list empty backmatter sections. To re-enable, uncomment \makeindex /
+% \makeglossaries and the corresponding \printindex / \printglossaries blocks
+% at the end of the document, then add \newacronym/\index entries as needed.
+%\makeindex
+%\makeglossaries
 
 % Formato A4
 \geometry
@@ -116,7 +114,7 @@ twoside}
 %ver edicionPFC.sty para modificaciones
 
 %:Para crear la portada y la portada interior (pagina titular)
-\titulo{A Study on Foundational Visual-Language Models \mbox{for } Histopathology Image Analysis} %\mbox evita que se divida una palabra al cambiar de línea
+\titulo{A Study on Foundational Vision-Language Models \mbox{for}~Histopathology Image Analysis} %\mbox + ~ keep "for Histopathology" on the same line without inserting a stray double-space
 \autor{Leandro Candau Sánchez de Ybargüen}
 \director{Miguel Ángel Gutiérrez Naranjo}
 \titulodirector{Profesor Titular}
@@ -231,19 +229,7 @@ twoside}
 %:Fichero con la bibliografía, BIBTEX
 \bibliography{bibliografiaLibroETSI}
 
-%:Índice alfabético de palabras
-\cleardoublepage
-\phantomsection
-\addcontentsline{toc}{listasb}{\indexname}
-\chaptermark{\indexname}
-\printindex
-
-
-%:Acrónimos
-\cleardoublepage
-\phantomsection
-\addcontentsline{toc}{listasb}{\glossaryname}
-\chaptermark{\glossaryname}
-\printglossaries
+% Index and glossary intentionally omitted — see the \makeindex / \makeglossaries
+% block at the top of this file for how to re-enable them.
 
 \end{document}

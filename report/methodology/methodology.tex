@@ -18,7 +18,7 @@ Before going further, it is worth being clear about what this work does not atte
 
 Histopathology is the microscopic study of tissue removed from a patient to diagnose disease --- most commonly cancer. A biopsy or surgical specimen is fixed, embedded in paraffin, sliced into thin sections (typically 4--5\,µm), stained, and mounted on a glass slide for a pathologist to examine under a microscope. The pathologist's report is the gold-standard diagnosis that drives treatment decisions in oncology and many other specialties. Automating any meaningful part of this workflow --- triaging slides, flagging regions of interest, suggesting a diagnosis --- is one of the highest-impact targets for medical AI, both because pathologist time is a scarce resource and because the visual patterns involved are well-defined enough to be machine-learnable.
 
-The stain used almost universally is hematoxylin and eosin (H\&E): hematoxylin colours cell nuclei a dark blue/purple, eosin colours cytoplasm and extracellular matrix pink. Slides are digitised by a Whole-Slide Imaging (WSI) scanner into a multi-gigapixel image (Figure~\ref{fig:wsi-multimag}), which is typically tiled into smaller patches (commonly $224 \times 224$ or $512 \times 512$ pixels at $20\times$ or $40\times$ magnification) for downstream learning, since current image encoders cannot process whole slides directly. Figure~\ref{fig:nct-crc-classes} shows the tissue-type variation a model has to discriminate between within a single dataset.
+The stain used almost universally is hematoxylin and eosin (H\&E): hematoxylin colours cell nuclei a dark blue/purple, eosin colours cytoplasm and extracellular matrix pink. Slides are digitised by a Whole-Slide Imaging (WSI) scanner into a multi-gigapixel image (Figure~\ref{fig:wsi-multimag}), which is typically tiled into smaller patches (commonly $224 \times 224$ or $512 \times 512$ pixels at $20\times$ or $40\times$ magnification) for downstream learning, since current image encoders cannot process whole slides directly; Figure~\ref{fig:wsi-patching} illustrates the patch-sampling step on a single WSI. Figure~\ref{fig:nct-crc-classes} then shows the tissue-type variation a model has to discriminate between within a single dataset.
 
 \begin{figure}[H]
     \centering
@@ -45,7 +45,7 @@ The stain used almost universally is hematoxylin and eosin (H\&E): hematoxylin c
 
 Several things make this domain hard for general-purpose vision-language models. Clinical archives rarely come with per-image natural-language captions of the kind that train CLIP at scale; pathology image--text corpora are small (PLIP's OpenPath has $\sim 208$k pairs, vs CLIP's $400$M for natural images) and noisier in their text. Several public histopathology datasets ship with subtle artifacts --- white-pixel skew, scanner-specific JPEG signatures, augmentation-pair leakage --- that can drive in-distribution performance without any meaningful tissue signal, motivating careful external evaluation. And finally, the visual signature of an H\&E slide depends heavily on the lab and scanner that produced it; that is the topic of the next subsection.
 
-\subsection{Stain normalization in histopathology images}
+\subsection{Stain normalisation in histopathology images}
 \label{sec:meth-stain}
 
 H\&E staining is not a deterministic procedure. The hematoxylin and eosin formulations, staining times, scanner colour profiles, and even individual technician handling all introduce variation in the resulting colour palette. Across institutions the variation is large and visible to the eye --- two slides of the same tissue type can look stylistically very different. Within a single institution it is smaller but still present, varying with technician shift, batch of reagents, and scanner calibration. This becomes a problem for any downstream classifier: a model trained on one institution's slides can latch onto that institution's specific stain signature rather than the underlying tissue pattern, then fail on a differently-stained slide of the same disease at evaluation time. Stain normalisation is the family of techniques that tries to remove the confounder by mapping every input into a common reference stain palette before downstream encoding.
@@ -88,7 +88,7 @@ Concretely, the procedure first \emph{learns} what colours the hematoxylin and e
         \includegraphics[width=\textwidth]{../results/plots/stain_single_vahadane.png}
         \par\vspace{2pt}\footnotesize (d) Vahadane.
     \end{minipage}
-    \caption{Stain normalization comparison on a single LC25000 benign-lung patch. (a) Raw input, (b) Macenko-normalized, (c) Reinhard-normalized, (d) Vahadane-normalized. Each method produces a different colour palette from the same underlying tissue content. The full multi-class comparison, including the Vahadane convergence failure on some patches, is in §\ref{sec:results-stain}.}
+    \caption{Stain normalisation comparison on a single LC25000 benign-lung patch. (a) Raw input, (b) Macenko-normalised, (c) Reinhard-normalised, (d) Vahadane-normalised. Each method produces a different colour palette from the same underlying tissue content. The full multi-class comparison, including the Vahadane convergence failure on some patches, is in §\ref{sec:results-stain}.}
     \label{fig:stain-illustration}
 \end{figure}
 

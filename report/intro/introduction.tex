@@ -23,12 +23,12 @@ The training source is LC25000~\cite{borkowski2019lc25000}, a 5-class lung-plus-
 \section{Research Questions}
 \label{sec:intro-rq}
 \begin{itemize}
-    \item \textbf{RQ1} --- What baseline classification and generalization behaviour does a frozen general-purpose CLIP pipeline (ImageNet ResNet50 + BERT) achieve on LC25000, and what failure modes appear?
+    \item \textbf{RQ1} --- What baseline classification and generalisation behaviour does a frozen general-purpose CLIP pipeline (ImageNet ResNet50 + BERT) achieve on LC25000, and what failure modes appear?
     \item \textbf{RQ2} --- Does the CLIP paradigm validate its \emph{foundational-model} premise relative to a non-CLIP classifier on the same image encoder, both in-distribution and on data the model was never trained on?
-    \item \textbf{RQ3} --- Does stain normalization help when we evaluate on datasets the model was never trained on?
+    \item \textbf{RQ3} --- Does stain normalisation help when we evaluate on datasets the model was never trained on?
     \item \textbf{RQ4} --- Does using a text encoder pretrained on biomedical text (BioBERT~\cite{lee2020biobert}, PubMedBERT~\cite{gu2021pubmedbert}), instead of generic BERT~\cite{devlin2019bert}, improve performance? And does the prompt format (bare class name vs longer composed prompt) interact with the encoder choice?
     \item \textbf{RQ5} --- Does the image encoder's \emph{pretraining choice} matter? Specifically: replacing the general-purpose ResNet50~\cite{he2016resnet} with PLIP's histopathology-pretrained ViT-B/32~\cite{huang2023plip,dosovitskiy2021vit}, and with DINOv2's general-domain self-supervised ViT-B/14~\cite{oquab2024dinov2} as a control that isolates ``ViT architecture and self-supervision'' from ``histopathology pretraining specifically''.
-    \item \textbf{RQ6} --- How well does each variant generalize to data the model has never seen, evaluated across three external datasets that span shift severity and two organs?
+    \item \textbf{RQ6} --- How well does each variant generalise to data the model has never seen, evaluated across three external datasets that span shift severity and two organs?
 \end{itemize}
 
 
@@ -40,7 +40,7 @@ The central contribution of this project is a controlled measurement of how much
 Headline findings (full results in Chapter~\ref{chp:results}):
 \begin{itemize}
     \item \textbf{Image encoder pretraining is the dominant lever.} Replacing ResNet50 with PLIP's pretrained ViT-B/32 (histopathology image--text contrastive) gains $+0.067$ F1 on close-shift colon (NCT-CRC), $+0.027$ on different-hospital colon (Chaoyang), and $+0.335$ on different-source lung (LungHist700). No other intervention tested moves the needle comparably.
-    \item \textbf{The lung-side advantage decomposes into three roughly equal steps.} The DINOv2 and PLIP zero-shot controls together decompose PLIP's $+0.335$ F1 lung advantage into three contributions of $\sim 0.1$ F1 each: ViT + self-supervised pretraining on general images ($+0.152$), histopathology pretraining specifically ($+0.087$), and LC25000 supervision on top ($+0.096$).
+    \item \textbf{The lung-side advantage decomposes into three additive steps of comparable magnitude.} The DINOv2 and PLIP zero-shot controls together decompose PLIP's $+0.335$ F1 lung advantage into three contributions: ViT + self-supervised pretraining on general images ($+0.152$), histopathology pretraining specifically ($+0.087$), and LC25000 supervision on top ($+0.096$).
     \item \textbf{Five other interventions move the needle far less, or only in narrow regimes.} Stain Macenko (NCT-NORM reference) is the only input-side lever that produces a measurable positive gain under shift ($+0.030$ on Chaoyang, $+0.020$ on LungHist700), but its magnitude is dominated by the image-encoder lever on the same datasets and it regresses on NCT-CRC ($-0.022$, which arrives Macenko-normalised at release). Biomedical text encoders (BioBERT, PubMedBERT) tie or trail baseline across all 6 grid cells on NCT, and the best biomedical cell (PubMedBERT + name\_only) extended to Chaoyang and LungHist700 confirms no transfer benefit on any of the three datasets. A non-CLIP plain classifier ties CLIP in-distribution and on close-shift external data but loses on heavier shift; prompt-format variations within the text-encoder comparison are within noise.
     \item \textbf{CLIP's foundational-model premise is validated under shift, not in-distribution.} CLIP and a plain CE classifier tie at saturation in-distribution and on close-shift external; CLIP's edge appears under heavier shift via the bounded-cosine + temperature-scaled classifier geometry, which doesn't degenerate the way high-confidence softmax does.
 \end{itemize}
