@@ -26,6 +26,10 @@
 %:Push leftover vertical space to the bottom margin (no inter-element stretching)
 \raggedbottom
 
+%:Override libroETSI.sty's textformat=period — captions in this document end with their own
+%:author-supplied period, so we don't want the caption package appending a second one.
+\captionsetup{textformat=simple}
+
 
 %:Estas líneas de código son INNECESARIAS excepto para mostrar determinadas características en este manual. Pueden eliminarse o comentarse sin ningún problema.
 %Se usan para compilar el capítulo estilolibroetsi.tex

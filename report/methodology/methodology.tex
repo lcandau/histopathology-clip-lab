@@ -5,7 +5,10 @@
 \label{sec:meth-overview}
 \begin{itemize}
     \item One-page chapter map + project question recap.
-    \item Reading order: background $\to$ baseline $\to$ ablations.
+    \item Reading order: background $\to$ baseline $\to$ experiments.
+    \item Single-variable-change principle: every variant in the experiment matrix changes exactly one component of the baseline (image encoder, text encoder, input preprocessing, classifier head, or prompt format).
+    \item Experiment matrix grouped by axis of variation; full matrix in Table~\ref{tab:experiment-matrix} of Chapter~\ref{chp:results}.
+    \item Scope boundaries: no patient-level grouping, no human-expert evaluation, no architecture-controlled comparison vs CONCH~\cite{lu2024conch} / BiomedCLIP~\cite{zhang2023biomedclip} / MUSK~\cite{xiang2025musk}. Deferred to future work.
 \end{itemize}
 
 
@@ -411,15 +414,6 @@ Figure~\ref{fig:clip-paradigm} reproduces the canonical CLIP paradigm as introdu
     \item Results are reported per external dataset, not averaged across datasets.
     \item Aggregating across datasets would hide the cross-organ regime change observed in this study (Chapter~\ref{results}); a single mean-OOD number collapses an order-of-magnitude difference between organs into one misleading point.
     \item Per-dataset reporting is therefore an evaluation choice with explicit methodological motivation.
-\end{itemize}
-
-
-\section{Experimental Design and Ablation Protocol}
-\label{sec:meth-design}
-\begin{itemize}
-    \item Single-variable-change principle.
-    \item Matrix grouped by axis of variation; full matrix in Table~\ref{tab:experiment-matrix} of Chapter~\ref{results}.
-    \item Scope boundaries: no patient-level grouping, no human-expert evaluation, no architecture-controlled comparison vs CONCH~\cite{lu2024conch} $/$ BiomedCLIP~\cite{zhang2023biomedclip} $/$ MUSK~\cite{xiang2025musk}. Deferred to future work.
 \end{itemize}
 
 

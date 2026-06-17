@@ -18,6 +18,14 @@
         \item CONCH~\cite{lu2024conch} (2024) --- larger pathology VLM.
         \item UNI~\cite{chen2024uni} (2024), BiomedCLIP~\cite{zhang2023biomedclip} (2023), MUSK~\cite{xiang2025musk} (2025) --- recent entrants.
     \end{itemize}
+\end{itemize}
+
+\noindent\colorbox{yellow}{%
+\begin{minipage}{0.95\textwidth}
+\textbf{TODO before shipping --- verify literature claim.} Conclusion §\ref{sec:concl-conclusions} (RQ5) asserts that ``recent CLIP-for-histopathology papers routinely emphasise novel contrastive losses, biomedical text encoders, and stain harmonisation as the key levers for cross-dataset generalisation''. Before submission, skim the pathology foundation-model papers listed above (CONCH, UNI, BiomedCLIP, MUSK, PLIP, TransPath, Phikon) and confirm that this characterisation holds. If accurate, surface the relevant citations here and remove this note; if inaccurate, soften the Conclusion claim accordingly.
+\end{minipage}}
+
+\begin{itemize}
     \item Open challenges: benchmarks, dataset bias, cross-institution generalization, compute scale.
     \item Where this project fits: small-scale empirical study of general-purpose foundation backbones on pathology classification, with single-variable ablations.
 \end{itemize}
