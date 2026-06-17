@@ -4,33 +4,29 @@
 
 \section{Motivation}
 \label{sec:intro-motivation}
-\begin{itemize}
-    \item Clinical relevance of histopathology classification.
-    \item Limited labelled data --- a recurring limitation in this domain.
-    \item Foundation models~\cite{bommasani2021foundation} --- able to do different tasks with little task-specific supervision; in the vision--language line, CLIP~\cite{radford2021clip} is the paradigm under study here.
-    \item Project question (refined during the project): \textit{``Where does the pretraining of a CLIP-style histopathology pipeline pay off, and where does it not?''} --- evaluated across head-side, loss-side, text-side, and image-side interventions, both in-distribution and on three external datasets covering two organs.
-    \item Framing: CLIP as the object of study, not the classifier. Findings should generalise to other scientific domains where short or missing labels are the norm.
-\end{itemize}
+
+Histopathology --- the microscopic examination of stained tissue sections --- is the gold-standard test for diagnosing cancer and many other diseases. Automating any meaningful part of the pathologist's workflow (triaging slides, flagging regions of interest, suggesting a candidate diagnosis) is one of the highest-impact targets for medical AI, and the visual patterns involved are well-defined enough to be machine-learnable in principle.
+
+The practical bottleneck is data. Labelled histopathology is expensive to produce --- it takes pathologist time and clinical context that don't scale --- and patient privacy further restricts what can be shared. This makes any approach that relies on broad, label-cheap supervision particularly attractive.
+
+Foundation models~\cite{bommasani2021foundation} are designed for exactly this regime: models trained on broad data at large scale that can then be adapted to a wide range of downstream tasks with little task-specific supervision. In the vision--language line, CLIP~\cite{radford2021clip} is the canonical example and the paradigm under study in this work. \textbf{The question this project asks is where the pretraining of a CLIP-style histopathology pipeline actually pays off, and where it does not} --- evaluated across head-side, loss-side, text-side, and image-side interventions, both in-distribution and on three external datasets covering two organs. The framing is deliberate: CLIP as the object of study rather than the classifier itself, so the findings should generalise to other scientific domains where short or missing labels are the norm.
 
 
 \section{Project Scope Evolution}
 \label{sec:intro-scope}
-\begin{itemize}
-    \item Initial direction $\to$ semantic segmentation. Abandoned because annotated segmentation data was too scarce within the time budget.
-    \item Pivot $\to$ image-level classification, same domain, reframed question.
-    \item Training source: LC25000~\cite{borkowski2019lc25000} (5-class, lung + colon).
-    \item External evaluation: NCT-CRC-HE-7K~\cite{kather2019nct} (close-shift colon), Chaoyang~\cite{zhu2021chaoyang} (different-hospital colon), and LungHist700~\cite{tabatabaei2024lunghist} (different-source lung).
-    \item Reference points: PLIP~\cite{huang2023plip} zero-shot (no LC25000 supervision) and a plain image classifier (no CLIP architecture).
-\end{itemize}
+
+The project began with a different scope. The initial direction was semantic segmentation of histopathology slides --- pixel-level identification of tissue regions --- which is closer to what a clinical workflow actually produces. That direction was abandoned within the first few weeks: annotated segmentation data at the scale we needed was too scarce, and producing it would have required pathologist time well beyond the project budget. We pivoted to image-level classification on the same domain, which preserves the methodological questions about CLIP and histopathology while removing the data-cost wall.
+
+The training source is LC25000~\cite{borkowski2019lc25000}, a 5-class lung-plus-colon patch dataset that fits the frozen-backbone training regime without needing pixel-level labels. External evaluation runs on three datasets chosen to span shift severity and two organs: NCT-CRC-HE-7K~\cite{kather2019nct} (close-shift colon), Chaoyang~\cite{zhu2021chaoyang} (different-hospital colon), and LungHist700~\cite{tabatabaei2024lunghist} (different-source lung). Two reference baselines run alongside the main experiments: PLIP~\cite{huang2023plip} zero-shot (the full PLIP model with no LC25000 supervision) and a non-CLIP plain image classifier (ResNet50 + \texttt{Dense(5)}). Together these set up the comparisons the rest of the document is built on.
 
 
 \section{Research Questions}
 \label{sec:intro-rq}
 \begin{itemize}
     \item \textbf{RQ1} --- What baseline classification and generalization behaviour does a frozen general-purpose CLIP pipeline (ImageNet ResNet50 + BERT) achieve on LC25000, and what failure modes appear?
-    \item \textbf{RQ2} --- Does the CLIP paradigm validate its \emph{foundational-model} premise --- learn one task, generalize to tasks it was not specifically trained for --- relative to a non-CLIP classifier on the same image encoder?
+    \item \textbf{RQ2} --- Does the CLIP paradigm validate its \emph{foundational-model} premise relative to a non-CLIP classifier on the same image encoder, both in-distribution and on data the model was never trained on?
     \item \textbf{RQ3} --- Does stain normalization help when we evaluate on datasets the model was never trained on?
-    \item \textbf{RQ4} --- Does using a text encoder pretrained on biomedical text (BioBERT~\cite{lee2020biobert}, PubMedBERT~\cite{gu2021pubmedbert}), instead of generic BERT~\cite{devlin2019bert}, improve performance under short class-name prompts?
+    \item \textbf{RQ4} --- Does using a text encoder pretrained on biomedical text (BioBERT~\cite{lee2020biobert}, PubMedBERT~\cite{gu2021pubmedbert}), instead of generic BERT~\cite{devlin2019bert}, improve performance? And does the prompt format (bare class name vs longer composed prompt) interact with the encoder choice?
     \item \textbf{RQ5} --- Does the image encoder's \emph{pretraining choice} matter? Specifically: replacing the general-purpose ResNet50~\cite{he2016resnet} with PLIP's histopathology-pretrained ViT-B/32~\cite{huang2023plip,dosovitskiy2021vit}, and with DINOv2's general-domain self-supervised ViT-B/14~\cite{oquab2024dinov2} as a control that isolates ``ViT architecture and self-supervision'' from ``histopathology pretraining specifically''.
     \item \textbf{RQ6} --- How well does each variant generalize to data the model has never seen, evaluated across three external datasets that span shift severity and two organs?
 \end{itemize}
@@ -44,15 +40,15 @@ The central contribution of this project is a controlled measurement of how much
 Headline findings (full results in Chapter~\ref{chp:results}):
 \begin{itemize}
     \item \textbf{Image encoder pretraining is the dominant lever.} Replacing ResNet50 with PLIP's pretrained ViT-B/32 (histopathology image--text contrastive) gains $+0.067$ F1 on close-shift colon (NCT-CRC), $+0.027$ on different-hospital colon (Chaoyang), and $+0.335$ on different-source lung (LungHist700). No other intervention tested moves the needle comparably.
-    \item \textbf{The lung-side advantage decomposes evenly.} The DINOv2 control (same general ViT architecture family as PLIP, self-supervised on general natural images, no histopathology data) lifts LungHist700 by $+0.152$ over baseline --- about half of PLIP's $+0.335$ gap. The other half is attributable to histopathology pretraining specifically.
-    \item \textbf{Five other interventions move the needle far less, or only in narrow regimes.} Stain Macenko (NCT-NORM reference) is the only input-side lever that produces a measurable positive gain under shift ($+0.030$ on Chaoyang, $+0.020$ on LungHist700), but its magnitude is dominated by the image-encoder lever on the same datasets and it regresses on NCT-CRC ($-0.022$, which arrives Macenko-normalised at release). Biomedical text encoders (BioBERT, PubMedBERT) tie or trail baseline across all 6 grid cells on NCT, and the best biomedical cell (PubMedBERT + name\_only) extended to Chaoyang and LungHist700 confirms no transfer benefit on any of the three datasets. A non-CLIP plain classifier ties CLIP in-distribution and on close-shift external data but loses on heavier shift; prompt-format variations within the text encoder ablation are within noise.
+    \item \textbf{The lung-side advantage decomposes into three roughly equal steps.} The DINOv2 and PLIP zero-shot controls together decompose PLIP's $+0.335$ F1 lung advantage into three contributions of $\sim 0.1$ F1 each: ViT + self-supervised pretraining on general images ($+0.152$), histopathology pretraining specifically ($+0.087$), and LC25000 supervision on top ($+0.096$).
+    \item \textbf{Five other interventions move the needle far less, or only in narrow regimes.} Stain Macenko (NCT-NORM reference) is the only input-side lever that produces a measurable positive gain under shift ($+0.030$ on Chaoyang, $+0.020$ on LungHist700), but its magnitude is dominated by the image-encoder lever on the same datasets and it regresses on NCT-CRC ($-0.022$, which arrives Macenko-normalised at release). Biomedical text encoders (BioBERT, PubMedBERT) tie or trail baseline across all 6 grid cells on NCT, and the best biomedical cell (PubMedBERT + name\_only) extended to Chaoyang and LungHist700 confirms no transfer benefit on any of the three datasets. A non-CLIP plain classifier ties CLIP in-distribution and on close-shift external data but loses on heavier shift; prompt-format variations within the text-encoder comparison are within noise.
     \item \textbf{CLIP's foundational-model premise is validated under shift, not in-distribution.} CLIP and a plain CE classifier tie at saturation in-distribution and on close-shift external; CLIP's edge appears under heavier shift via the bounded-cosine + temperature-scaled classifier geometry, which doesn't degenerate the way high-confidence softmax does.
 \end{itemize}
 
 Methodological contributions:
 \begin{itemize}
     \item Single-variable-change protocol: each experiment differs from the baseline in exactly one design choice, so the resulting delta is attributable.
-    \item Per-organ external reporting: results are presented per dataset, not averaged; aggregate mean-OOD numbers would hide the cross-organ regime change observed in this study.
+    \item Per-organ external reporting: results are presented per dataset, not averaged; averaging across datasets would hide the cross-organ regime change observed in this study.
     \item Reproducibility: artifact bundle (fixed-seed split, cached DINOv2 features, weights, metric files, plots) versioned alongside the report in the project repository.
     \item Explicit written discussion of dataset and methodological limits (Chapter~\ref{chp:conclusion}).
 \end{itemize}
@@ -62,7 +58,7 @@ Methodological contributions:
 \label{sec:intro-structure}
 \begin{itemize}
     \item Chapter~\ref{chp:introduction} (Introduction) --- motivation, scope, research questions, contributions.
-    \item Chapter~\ref{chp:stateofart} (State of the Art) --- foundation models, multimodal contrastive lineage, pathology FMs, where this thesis fits.
+    \item Chapter~\ref{chp:stateofart} (State of the Art) --- foundation models, multimodal contrastive lineage, pathology FMs, where this work fits.
     \item Chapter~\ref{chp:methodology} (Methodology) --- CLIP architecture, image and text encoders, datasets, preprocessing, baseline, evaluation protocol, reproducibility.
     \item Chapter~\ref{chp:results} (Results and Discussion) --- the experiments and what each measured, ending in a synthesis section.
     \item Chapter~\ref{chp:conclusion} (Conclusions and Future Work) --- one-paragraph-per-RQ conclusions, limitations, future work.
