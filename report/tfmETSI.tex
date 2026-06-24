@@ -119,7 +119,7 @@ twoside}
 \director{Miguel Ángel Gutiérrez Naranjo}
 \titulodirector{Profesor Titular}
 \directorb{Miguel Cárdenas Montes}
-\titulodirectorb{Co-director}
+\titulodirectorb{Investigador Científico de OPI}
 
 \departamento{Dpto. de Ciencias de la Computación e IA}
 \centro{Escuela Técnica Superior de Ingeniería Informática}
@@ -134,9 +134,14 @@ twoside}
 	{
  	linkcolor=black, %Tocar para poner color en enlaces
 	pdfauthor={\elautor},
-	pdftitle={\nombretrabajo,\eltitulo}, 
-	pdfkeywords={Latex, edición, formato de texto}	
+	pdftitle={\nombretrabajo,\eltitulo},
+	pdfkeywords={Latex, edición, formato de texto}
 	 }
+
+% Suppress the Tribunal sign-off page (tutor feedback 2026-06-22, Miguel Ángel: "Quita esta página").
+% The page was meant for the physical-printout era and adds nothing to the digital PDF.
+% Overrides \secondpagePFC from edicionPFC.sty with a no-op; template file untouched.
+\def\secondpagePFC{}
 
 \portadaPFC{figuras/LogoUS.pdf}{figuras/LogoTSC.pdf} %logo de la Universidad y logo del departamento, si lo hubiera. Para cambiar el pie de página con los logos, debe editarse el fichero ediciónPFC.sty
 
