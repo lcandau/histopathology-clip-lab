@@ -110,7 +110,7 @@ CLIP~\cite{radford2021clip} (Contrastive Language--Image Pretraining, Radford et
     \item \textbf{Prompt engineering as a sensitivity lever.} Because classification depends on how each class is described in natural language, the prompt format itself becomes a tunable knob; we test this directly in §\ref{sec:results-text-encoder}.
 \end{itemize}
 
-A practical consequence is that CLIP is the \emph{object} of study in this work rather than the classifier per se. Every variant is evaluated via classification F1, but the broader question is what kind of representations CLIP produces under histopathology supervision, and what changes when individual components of the pipeline are swapped.
+A practical consequence is that the CLIP paradigm, a contrastive image--text training framework, is the \emph{object} of study in this work, rather than the classifier per se. Every variant is evaluated via classification F1, but the broader question is what kind of representations the paradigm produces under histopathology supervision, and what changes when individual components of the pipeline are swapped.
 
 \subsection{Architecture and training signal}
 
@@ -251,7 +251,7 @@ PLIP~\cite{huang2023plip} (Huang et al., 2023) is a CLIP-style model pretrained 
 
 \FloatBarrier
 
-We use PLIP in two distinct ways. As a \emph{zero-shot reference baseline} (§\ref{sec:results-plip-zeroshot}), the full PLIP model --- image and text encoders both frozen --- is used off-the-shelf for cosine-similarity classification on all four datasets (LC25000 plus the three external evaluation sets). As a \emph{pretrained image encoder} in the image-encoder comparison (§\ref{sec:meth-image-vit}), only PLIP's ViT-B/32 vision encoder is used, paired with our LC25000-trained projection head and a separate BERT text encoder. The two roles isolate different questions: the first tests what pathology pretraining gives on its own; the second tests what pathology pretraining gives on top of LC25000 supervision.
+We use PLIP in two distinct ways. As a \emph{zero-shot reference baseline} (§\ref{sec:results-plip-zeroshot}), the full PLIP model --- image and text encoders both frozen --- is used off-the-shelf for cosine-similarity classification on all four datasets (LC25000 plus the three external evaluation sets). As a \emph{pretrained image encoder} in the image-encoder comparison (§\ref{sec:meth-image-vit}), only PLIP's ViT-B/32 vision encoder is used, paired with our LC25000-trained projection head and a separate BERT text encoder. The two roles isolate different questions: the first tests what pathology pretraining gives on its own; the second tests what pathology pretraining gives on top of the additional LC25000 supervision.
 
 
 \section{Image Encoders}
@@ -305,9 +305,9 @@ The role of DINOv2 in this work is as the control in the image-encoder compariso
 \section{Text Encoders}
 \label{sec:meth-text}
 
-The text encoder is the second component swapped, in the text-encoder comparison of §\ref{sec:results-text-encoder}. All three encoders considered here belong to the \textbf{BERT family}~\cite{devlin2019bert} (Devlin et al., 2019). In plain terms, BERT is a pre-trained language model: given a short piece of text, it produces a fixed-size numerical vector --- an ``embedding'' --- that downstream layers can read. It learned to do this by reading a large amount of general-English text (BookCorpus and English Wikipedia) during pretraining, with a fraction of the words randomly hidden and the model asked to fill them in from context. That training setup forces BERT to encode each word's meaning in terms of the surrounding sentence rather than in isolation. The baseline variant we use, \texttt{bert-base-uncased}, returns a 768-dimensional vector for each input prompt. The architecture is identical across the three encoders in this comparison; what differs is the corpus each was pretrained on.
+The text encoder is the second component swapped, in the text-encoder comparison of §\ref{sec:results-text-encoder}. The three encoders compared here are all from the BERT family~\cite{devlin2019bert} (Devlin et al., 2019): the original \textbf{BERT}, \textbf{BioBERT}, and \textbf{PubMedBERT}. In plain terms, BERT is a pre-trained language model: given a short piece of text, it produces a fixed-size numerical vector --- an ``embedding'' --- that downstream layers can read. It learned to do this by reading a large amount of general-English text (BookCorpus and English Wikipedia) during pretraining, with a fraction of the words randomly hidden and the model asked to fill them in from context. That training setup forces BERT to encode each word's meaning in terms of the surrounding sentence rather than in isolation. The baseline is \texttt{bert-base-uncased}, which returns a 768-dimensional vector for each input prompt. The architecture is identical across all three encoders; what differs is the corpus each was pretrained on.
 
-The two biomedical variants are:
+The other two encoders are biomedical variants of the same architecture:
 
 \begin{itemize}
     \item \textbf{BioBERT}~\cite{lee2020biobert} (Lee et al., 2020): a BERT-base checkpoint that starts from the BERT initialisation and is further pretrained on PubMed abstracts and PMC full-text articles, on top of the original BERT corpus.
@@ -411,7 +411,7 @@ Each image encoder expects pixel values in the distribution it was pretrained on
 
 \subsection{Text preprocessing}
 
-All text encoders in this work use BERT-family WordPiece tokenisers (BERT, BioBERT, PubMedBERT, and PLIP's text encoder). We pad or truncate every input to a fixed sequence length of 24 tokens, which leaves comfortable headroom for every class-prompt format we test. The baseline's composed prompt template is \texttt{"A histopathology image of \{class\_name\}."}, where \texttt{\{class\_name\}} is replaced at runtime by the specific LC25000 tissue label --- for example, \texttt{"A histopathology image of lung adenocarcinoma."} for that class.
+The three text encoders compared in §\ref{sec:results-text-encoder} (BERT, BioBERT, PubMedBERT) all use BERT-family WordPiece tokenisers. PLIP's own text encoder, used only inside the frozen zero-shot reference of §\ref{sec:results-plip-zeroshot}, tokenises with CLIP's BPE scheme instead and is not part of this comparison. We pad or truncate every input to a fixed sequence length of 24 tokens, which leaves comfortable headroom for every class-prompt format we test. The baseline's composed prompt template is \texttt{"A histopathology image of \{class\_name\}."}, where \texttt{\{class\_name\}} is replaced at runtime by the specific LC25000 tissue label --- for example, \texttt{"A histopathology image of lung adenocarcinoma."} for that class.
 
 \subsection{LC25000-specific cleanup}
 
@@ -466,11 +466,13 @@ The baseline pipeline is a frozen ResNet50 image encoder paired with a frozen BE
 
 We use two classification rules, depending on the variant. CLIP variants predict by taking the argmax of cosine similarity between the image embedding and the five LC25000 class-prompt embeddings; the plain classifier (§\ref{sec:results-foundational-vs-plain}) predicts by taking the argmax of the softmax over its \texttt{Dense(5)} output. All the metrics reported in the Results chapter follow from one of these two rules.
 
-The global metrics reported throughout this work are:
+The global metrics reported throughout this work are listed below. In all formulas, $N$ is the total number of samples in the evaluation set, $K$ the number of classes (five for LC25000 in-distribution; two or three on the restricted-argmax external evaluations of §\ref{sec:meth-eval-restricted}), $n_k$ the number of samples in class $k$, and $\hat{y}_i, y_i$ the predicted and true label for sample $i$. Per-class true-positive, false-positive, and false-negative counts are $\mathrm{TP}_k, \mathrm{FP}_k, \mathrm{FN}_k$; per-class precision is $P_k = \mathrm{TP}_k / (\mathrm{TP}_k + \mathrm{FP}_k)$. Definitions and implementations follow scikit-learn~\cite{pedregosa2011sklearn} (Pedregosa et al., 2011).
+
 \begin{itemize}
     \item \textbf{Accuracy} --- the fraction of samples whose predicted class matches the true class:
-    $$\text{Accuracy} = \frac{1}{N} \sum_{i=1}^{N} \mathbb{1}[\hat{y}_i = y_i].$$
-    \item \textbf{Balanced accuracy} --- the macro-average of per-class recall: equal weight to every class regardless of its support, so a single-class predictor on an imbalanced dataset cannot game the metric:
+    $$\text{Accuracy} = \frac{1}{N} \sum_{i=1}^{N} \mathds{1}[\hat{y}_i = y_i],$$
+    where $\mathds{1}[\cdot]$ is the indicator function (1 if the condition inside holds, 0 otherwise).
+    \item \textbf{Balanced accuracy} --- the macro-average of per-class recall: every class is weighted equally regardless of how many samples it has, so a model that always predicts the majority class on imbalanced data cannot do well on this metric:
     $$\text{Balanced Accuracy} = \frac{1}{K} \sum_{k=1}^{K} R_k, \qquad R_k = \frac{\mathrm{TP}_k}{\mathrm{TP}_k + \mathrm{FN}_k}.$$
     \item \textbf{Macro-F1} --- the macro-average of per-class F1 (harmonic mean of precision and recall), again with equal weight per class. This is the headline metric throughout, chosen because external evaluations have imbalanced class supports and macro-F1 penalises class collapse symmetrically:
     $$\text{Macro-F1} = \frac{1}{K} \sum_{k=1}^{K} F1_k, \qquad F1_k = \frac{2 \, P_k R_k}{P_k + R_k}.$$
@@ -478,9 +480,10 @@ The global metrics reported throughout this work are:
     $$\text{Weighted F1} = \sum_{k=1}^{K} \frac{n_k}{N} \cdot F1_k.$$
 \end{itemize}
 
-We additionally report per-class precision, recall, F1, and support for every variant, along with confusion matrices (both raw counts and row-normalised by true class). For visualisations we produce a shared image-and-prompt UMAP on the training source (LC25000 test split), one fit per variant with points colour-coded by class; and a cross-distribution UMAP grid per external dataset where LC25000 image embeddings (circles, by class) are overlaid with external-dataset embeddings (triangles, by class) in a single shared UMAP fit per external dataset. All UMAPs use \texttt{umap-learn} with $n\_\text{neighbors}=15$, $\text{min\_dist}=0.1$, and cosine distance, fit on the L2-normalised projection-head output.
+We additionally report per-class precision, recall, F1, and support for every variant, along with confusion matrices (both raw counts and row-normalised by true class). For visualisations we produce a shared image-and-prompt UMAP on the training source (LC25000 test split), one fit per variant with points colour-coded by class; and a cross-distribution UMAP grid per external dataset where LC25000 image embeddings (circles, by class) are overlaid with external-dataset embeddings (triangles, by class) in a single shared UMAP fit per external dataset. All UMAPs use \texttt{umap-learn}~\cite{mcinnes2018umap} (McInnes et al., 2018) with $n\_\text{neighbors}=15$, $\text{min\_dist}=0.1$, and cosine distance, fit on the L2-normalised projection-head output.
 
 \subsection{External-dataset evaluation: restricted-argmax protocol}
+\label{sec:meth-eval-restricted}
 
 External datasets cover only a subset of LC25000's classes --- NCT-CRC and Chaoyang are colon-only, LungHist700 is lung-only --- so an unrestricted argmax over all five LC25000 prompts would routinely predict the model's strongest out-of-organ class on these images and produce uninformative misclassifications. To avoid this, on external evaluation we restrict the argmax to the LC25000 classes that map to the external dataset's organ:
 

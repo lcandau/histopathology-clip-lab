@@ -103,7 +103,13 @@ twoside}
 \setlength{\parindent}{1.0 em}
 \setlength{\parskip}{0.4\baselineskip plus 0.1\baselineskip minus 0.05\baselineskip}
 
-\setcounter{tocdepth}{4}						% El nivel hasta el que se muestra el índice 
+\setcounter{tocdepth}{4}						% El nivel hasta el que se muestra el índice
+
+%:Prevent widows (single last line of a paragraph at page top)
+%:and orphans (single first line at page bottom) -- needed to stop
+%:two-word widows like "LC25000 supervision." landing alone on a page.
+\widowpenalty=10000
+\clubpenalty=10000
 
 
 %:Empieza el documento
@@ -117,7 +123,7 @@ twoside}
 \titulo{A Study on Foundational Vision-Language Models \mbox{for}~Histopathology Image Analysis} %\mbox + ~ keep "for Histopathology" on the same line without inserting a stray double-space
 \autor{Leandro Candau Sánchez de Ybargüen}
 \director{Miguel Ángel Gutiérrez Naranjo}
-\titulodirector{Profesor Titular}
+\titulodirector{Profesor Titular de Universidad}
 \directorb{Miguel Cárdenas Montes}
 \titulodirectorb{Investigador Científico de OPI}
 
